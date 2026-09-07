@@ -14,29 +14,17 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<DashboardLayout />}>
-          <Route
-            path="/"
-            element={<Navigate to="/dashboard" replace />}
-          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           <Route path="/dashboard" element={<Dashboard />} />
 
           <Route path="/patients" element={<Patients />} />
+          <Route path="/patients/new" element={<div>Add Patient</div>} />
+          <Route path="/patients/:id" element={<PatientDetails />} />
 
-          <Route
-            path="/patients/:id"
-            element={<PatientDetails />}
-          />
+          <Route path="/patients/:id/new-visit" element={<NewVisit />} />
 
-          <Route
-            path="/patients/:id/new-visit"
-            element={<NewVisit />}
-          />
-
-          <Route
-            path="/prescriptions"
-            element={<Prescription />}
-          />
+          <Route path="/prescriptions" element={<Prescription />} />
 
           <Route path="/settings" element={<Settings />} />
         </Route>

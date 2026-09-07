@@ -2,10 +2,8 @@ export interface Patient {
   id: string;
   patientId: string;
   name: string;
-
   age: number;
   dateOfBirth?: string;
-
   gender: "male" | "female" | "other";
   phone: string;
   address: string;
@@ -13,3 +11,5 @@ export interface Patient {
   notes: string;
   createdAt: string;
 }
+
+export type CreatePatientInput = Omit<Patient, "id" | "createdAt">;
