@@ -1,14 +1,47 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import DashboardLayout from "./layouts/DashboardLayout";
+
+import Dashboard from "./pages/Dashboard";
+import Patients from "./pages/Patients";
+import PatientDetails from "./pages/PatientDetails";
+import NewVisit from "./pages/NewVisit";
+import Prescription from "./pages/Prescription";
+import Settings from "./pages/Settings";
+
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-3xl font-bold text-gray-900">
-        QuickRx
-      </h1>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route
+            path="/"
+            element={<Navigate to="/dashboard" replace />}
+          />
 
-      <p className="mt-2 text-gray-600">
-        Ophthalmology Prescription Management System
-      </p>
-    </div>
+          <Route path="/dashboard" element={<Dashboard />} />
+
+          <Route path="/patients" element={<Patients />} />
+
+          <Route
+            path="/patients/:id"
+            element={<PatientDetails />}
+          />
+
+          <Route
+            path="/patients/:id/new-visit"
+            element={<NewVisit />}
+          />
+
+          <Route
+            path="/prescriptions"
+            element={<Prescription />}
+          />
+
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
