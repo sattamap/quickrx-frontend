@@ -78,19 +78,50 @@ function NewVisit() {
     );
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
 
-    console.log({
-      patientId: patient.id,
-      visitDate: new Date().toISOString(),
-      chiefComplaint,
-      diagnosis,
-      clinicalNotes,
-    });
+  console.log({
+    patientId: patient.id,
 
-    navigate(`/patients/${patient.id}`);
-  };
+    visitDate: new Date().toISOString(),
+
+    chiefComplaint,
+
+    examination: {
+      visualAcuity: {
+        right: visualAcuity.right,
+        left: visualAcuity.left,
+      },
+
+      refraction: {
+        right: refraction.right,
+        left: refraction.left,
+      },
+
+      iop: {
+        right: iop.right,
+        left: iop.left,
+      },
+
+      anteriorSegment: {
+        right: eyeExamination.anteriorSegment.right,
+        left: eyeExamination.anteriorSegment.left,
+      },
+
+      fundus: {
+        right: eyeExamination.fundus.right,
+        left: eyeExamination.fundus.left,
+      },
+    },
+
+    diagnosis,
+
+    clinicalNotes,
+  });
+
+  navigate(`/patients/${patient.id}`);
+};
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -652,36 +683,42 @@ function NewVisit() {
         </section>
 
         {/* Diagnosis */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Diagnosis</h2>
+        <div className="rounded-lg border bg-white p-4">
+          <h3 className="mb-1 text-lg font-semibold text-gray-800">
+            Diagnosis
+          </h3>
 
-          <div className="mt-4">
-            <textarea
-              value={diagnosis}
-              onChange={(event) => setDiagnosis(event.target.value)}
-              rows={3}
-              placeholder="Enter diagnosis..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-        </section>
+          <p className="mb-4 text-sm text-gray-500">
+            Enter the clinical diagnosis for this visit.
+          </p>
+
+          <textarea
+            rows={3}
+            value={diagnosis}
+            onChange={(event) => setDiagnosis(event.target.value)}
+            placeholder="Enter diagnosis..."
+            className="w-full resize-y rounded-lg border border-gray-300 px-3 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
 
         {/* Clinical Notes */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <div className="rounded-lg border bg-white p-4">
+          <h3 className="mb-1 text-lg font-semibold text-gray-800">
             Clinical Notes
-          </h2>
+          </h3>
 
-          <div className="mt-4">
-            <textarea
-              value={clinicalNotes}
-              onChange={(event) => setClinicalNotes(event.target.value)}
-              rows={5}
-              placeholder="Enter additional clinical notes..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-        </section>
+          <p className="mb-4 text-sm text-gray-500">
+            Add relevant clinical observations or additional notes.
+          </p>
+
+          <textarea
+            rows={5}
+            value={clinicalNotes}
+            onChange={(event) => setClinicalNotes(event.target.value)}
+            placeholder="Enter clinical notes..."
+            className="w-full resize-y rounded-lg border border-gray-300 px-3 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
 
         {/* Actions */}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
