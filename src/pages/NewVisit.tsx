@@ -40,6 +40,22 @@ function NewVisit() {
     },
   });
 
+  const [iop, setIop] = useState({
+    right: "",
+    left: "",
+  });
+
+  const [eyeExamination, setEyeExamination] = useState({
+    anteriorSegment: {
+      right: "",
+      left: "",
+    },
+    fundus: {
+      right: "",
+      left: "",
+    },
+  });
+
   if (!patient) {
     return (
       <div className="space-y-4">
@@ -168,12 +184,12 @@ function NewVisit() {
           </p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-white p-4">
+            <div className="min-w-0 rounded-lg border bg-white p-4">
               <h3 className="mb-4 text-lg font-semibold text-gray-800">
                 Visual Acuity
               </h3>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid min-w-0 gap-6 md:grid-cols-2">
                 {/* Right Eye */}
                 <div>
                   <h4 className="mb-3 font-medium text-gray-700">
@@ -233,7 +249,7 @@ function NewVisit() {
                     Left Eye (OS)
                   </h4>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid min-w-0 gap-6 md:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs text-center font-medium text-gray-700">
                         Unaided VA
@@ -282,7 +298,7 @@ function NewVisit() {
               </div>
             </div>
 
-            <div className="rounded-lg border bg-white p-4">
+            <div className="min-w-0 rounded-lg border bg-white p-4">
               <h3 className="mb-4 text-lg font-semibold text-gray-800">
                 Refraction
               </h3>
@@ -458,20 +474,179 @@ function NewVisit() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-dashed border-gray-300 p-4">
-              <p className="text-sm font-medium text-gray-700">IOP</p>
+            <div className="rounded-lg border bg-white p-4">
+              <h3 className="mb-4 text-lg font-semibold text-gray-800">
+                Intraocular Pressure (IOP)
+              </h3>
 
-              <p className="mt-1 text-xs text-gray-500">Right / Left eye</p>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {/* Right Eye */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Right Eye (OD)
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={iop.right}
+                      onChange={(event) =>
+                        setIop((previous) => ({
+                          ...previous,
+                          right: event.target.value,
+                        }))
+                      }
+                      placeholder="15"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                    />
+
+                    <span className="text-sm text-gray-500">mmHg</span>
+                  </div>
+                </div>
+
+                {/* Left Eye */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Left Eye (OS)
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={iop.left}
+                      onChange={(event) =>
+                        setIop((previous) => ({
+                          ...previous,
+                          left: event.target.value,
+                        }))
+                      }
+                      placeholder="16"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                    />
+
+                    <span className="text-sm text-gray-500">mmHg</span>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div className="rounded-lg border border-dashed border-gray-300 p-4">
-              <p className="text-sm font-medium text-gray-700">
+            <div className="min-w-0 rounded-lg border bg-white p-4">
+              <h3 className="mb-1 text-lg font-semibold text-gray-800">
                 Eye Examination
+              </h3>
+
+              <p className="mb-5 text-sm text-gray-500">
+                Anterior Segment / Fundus
               </p>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Anterior segment / Fundus
-              </p>
+              {/* Anterior Segment */}
+              <div className="mb-6">
+                <h4 className="mb-3 font-medium text-gray-700">
+                  Anterior Segment
+                </h4>
+
+                <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                  {/* Right Eye */}
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Right Eye (OD)
+                    </label>
+
+                    <textarea
+                      rows={4}
+                      value={eyeExamination.anteriorSegment.right}
+                      onChange={(event) =>
+                        setEyeExamination((previous) => ({
+                          ...previous,
+                          anteriorSegment: {
+                            ...previous.anteriorSegment,
+                            right: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Enter anterior segment findings..."
+                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  {/* Left Eye */}
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Left Eye (OS)
+                    </label>
+
+                    <textarea
+                      rows={4}
+                      value={eyeExamination.anteriorSegment.left}
+                      onChange={(event) =>
+                        setEyeExamination((previous) => ({
+                          ...previous,
+                          anteriorSegment: {
+                            ...previous.anteriorSegment,
+                            left: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Enter anterior segment findings..."
+                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fundus */}
+              <div>
+                <h4 className="mb-3 font-medium text-gray-700">Fundus</h4>
+
+                <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                  {/* Right Eye */}
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Right Eye (OD)
+                    </label>
+
+                    <textarea
+                      rows={4}
+                      value={eyeExamination.fundus.right}
+                      onChange={(event) =>
+                        setEyeExamination((previous) => ({
+                          ...previous,
+                          fundus: {
+                            ...previous.fundus,
+                            right: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Enter fundus findings..."
+                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  {/* Left Eye */}
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Left Eye (OS)
+                    </label>
+
+                    <textarea
+                      rows={4}
+                      value={eyeExamination.fundus.left}
+                      onChange={(event) =>
+                        setEyeExamination((previous) => ({
+                          ...previous,
+                          fundus: {
+                            ...previous.fundus,
+                            left: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Enter fundus findings..."
+                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
