@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { initialPatients } from "../data/patients";
 import { getVisits } from "../utils/visitStorage";
-import type { PrescriptionMedicine } from "../types/prescription";
+import type { Prescription, PrescriptionMedicine } from "../types/prescription";
+import { savePrescription } from "../utils/prescriptionStorage";
 
 function PrescriptionBuilder() {
   const { patientId, visitId } = useParams();
@@ -37,6 +38,9 @@ function PrescriptionBuilder() {
     nearAddition: "",
     pd: "",
   });
+
+  const [advice, setAdvice] = useState("");
+  const [followUp, setFollowUp] = useState("");
 
   const handleMedicineChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -119,6 +123,40 @@ function PrescriptionBuilder() {
     }));
   };
 
+const handleSavePrescription = () => {
+  if (!patient || !visit) {
+    window.alert("Patient or visit record could not be found.");
+    return;
+  }
+
+  if (medicines.length === 0) {
+    window.alert("Please add at least one medicine.");
+    return;
+  }
+
+  const prescription: Prescription = {
+    id: crypto.randomUUID(),
+    patientId: patient.id,
+    visitId: visit.id,
+    prescriptionDate: new Date().toISOString().split("T")[0],
+    medicines,
+    spectaclePrescription,
+    advice: advice.trim(),
+    followUp: followUp.trim(),
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    savePrescription(prescription);
+
+    window.alert("Prescription saved successfully.");
+
+    navigate(`/patients/${patient.id}/visits/${visit.id}`);
+  } catch (error) {
+    console.error("Failed to save prescription:", error);
+    window.alert("Unable to save prescription. Please try again.");
+  }
+};
   const patient = initialPatients.find(
     (currentPatient) => currentPatient.id === patientId,
   );
@@ -619,14 +657,66 @@ function PrescriptionBuilder() {
       </div>
 
       {/* Advice & Follow-up */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">
           Advice & Follow-up
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
-          Advice and follow-up fields will be added here.
-        </p>
+        <div className="mt-5 space-y-5">
+          <div>
+            <label
+              htmlFor="advice"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Advice
+            </label>
+
+            <textarea
+              id="advice"
+              value={advice}
+              onChange={(event) => setAdvice(event.target.value)}
+              rows={4}
+              placeholder="Enter advice for the patient..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="followUp"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Follow-up
+            </label>
+
+            <input
+              id="followUp"
+              type="text"
+              value={followUp}
+              onChange={(event) => setFollowUp(event.target.value)}
+              placeholder="e.g. Review after 4 weeks"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={() => navigate(`/patients/${patient.id}/visits/${visit.id}`)}
+          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSavePrescription}
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Save Prescription
+        </button>
       </div>
     </div>
   );
