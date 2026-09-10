@@ -9,6 +9,7 @@ import NewVisit from "./pages/NewVisit";
 import Prescription from "./pages/Prescription";
 import Settings from "./pages/Settings";
 import VisitDetails from "./pages/VisitDetails";
+import PrescriptionBuilder from "./pages/PrescriptionBuilder";
 
 function App() {
   return (
@@ -26,7 +27,10 @@ function App() {
             path="/patients/:patientId/visits/:visitId"
             element={<VisitDetails />}
           />
-
+          <Route
+            path="/patients/:patientId/visits/:visitId/prescription"
+            element={<PrescriptionBuilder />}
+          />
           <Route path="/prescriptions" element={<Prescription />} />
 
           <Route path="/settings" element={<Settings />} />
