@@ -1,3 +1,5 @@
+import type { Visit } from "../types/visit";
+import { saveVisit } from "../utils/visitStorage";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 
@@ -81,12 +83,18 @@ function NewVisit() {
 const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
   event.preventDefault();
 
-  console.log({
+  if (!patient) return;
+
+  const newVisit: Visit = {
+    id: crypto.randomUUID(),
+
     patientId: patient.id,
+
+    ageAtVisit: patient.age,
 
     visitDate: new Date().toISOString(),
 
-    chiefComplaint,
+    chiefComplaint: chiefComplaint.trim(),
 
     examination: {
       visualAcuity: {
@@ -115,14 +123,25 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
       },
     },
 
-    diagnosis,
+    diagnosis: diagnosis.trim(),
 
-    clinicalNotes,
-  });
+    clinicalNotes: clinicalNotes.trim(),
 
-  navigate(`/patients/${patient.id}`);
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    saveVisit(newVisit);
+
+    console.log("Visit saved successfully:", newVisit);
+
+    navigate(`/patients/${patient.id}`);
+  } catch (error) {
+    console.error("Failed to save visit:", error);
+
+    window.alert("Unable to save visit. Please try again.");
+  }
 };
-
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}

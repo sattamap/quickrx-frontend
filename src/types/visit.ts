@@ -40,17 +40,12 @@ export interface EyeExamination {
 export interface Visit {
   id: string;
   patientId: string;
-
+  ageAtVisit: number;
   visitDate: string;
-
   chiefComplaint: string;
-
   examination: EyeExamination;
-
   diagnosis: string;
-
   clinicalNotes: string;
-
   createdAt: string;
 }
 

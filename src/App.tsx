@@ -8,7 +8,7 @@ import PatientDetails from "./pages/PatientDetails";
 import NewVisit from "./pages/NewVisit";
 import Prescription from "./pages/Prescription";
 import Settings from "./pages/Settings";
-
+import VisitDetails from "./pages/VisitDetails";
 
 function App() {
   return (
@@ -20,10 +20,12 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
 
           <Route path="/patients" element={<Patients />} />
-         
           <Route path="/patients/:id" element={<PatientDetails />} />
-
           <Route path="/patients/:id/new-visit" element={<NewVisit />} />
+          <Route
+            path="/patients/:patientId/visits/:visitId"
+            element={<VisitDetails />}
+          />
 
           <Route path="/prescriptions" element={<Prescription />} />
 
