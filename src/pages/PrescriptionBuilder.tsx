@@ -21,6 +21,23 @@ function PrescriptionBuilder() {
     instructions: "",
   });
 
+  const [spectaclePrescription, setSpectaclePrescription] = useState({
+    right: {
+      sph: "",
+      cyl: "",
+      axis: "",
+      visualAcuity: "",
+    },
+    left: {
+      sph: "",
+      cyl: "",
+      axis: "",
+      visualAcuity: "",
+    },
+    nearAddition: "",
+    pd: "",
+  });
+
   const handleMedicineChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -68,6 +85,38 @@ function PrescriptionBuilder() {
     setMedicines((current) =>
       current.filter((medicine) => medicine.id !== medicineId),
     );
+  };
+
+  const handleSpectacleChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = event.target;
+
+    const [eye, field] = name.split(".") as [
+      "right" | "left",
+      "sph" | "cyl" | "axis" | "visualAcuity",
+    ];
+
+    if (eye === "right" || eye === "left") {
+      setSpectaclePrescription((current) => ({
+        ...current,
+        [eye]: {
+          ...current[eye],
+          [field]: value,
+        },
+      }));
+    }
+  };
+
+  const handleSpectacleGeneralChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = event.target;
+
+    setSpectaclePrescription((current) => ({
+      ...current,
+      [name]: value,
+    }));
   };
 
   const patient = initialPatients.find(
@@ -400,14 +449,173 @@ function PrescriptionBuilder() {
       </div>
 
       {/* Spectacle Prescription */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">
           Spectacle Prescription
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Spectacle prescription fields will be added here.
+          Enter the spectacle prescription for each eye.
         </p>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[700px] text-sm">
+            <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th className="px-3 py-3 font-medium">Eye</th>
+
+                <th className="px-3 py-3 font-medium">SPH</th>
+
+                <th className="px-3 py-3 font-medium">CYL</th>
+
+                <th className="px-3 py-3 font-medium">AXIS</th>
+
+                <th className="px-3 py-3 font-medium">VA</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {/* Right Eye */}
+              <tr className="border-b border-gray-100">
+                <td className="px-3 py-3 font-medium text-gray-900">Right</td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="right.sph"
+                    value={spectaclePrescription.right.sph}
+                    onChange={handleSpectacleChange}
+                    placeholder="-1.50"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="right.cyl"
+                    value={spectaclePrescription.right.cyl}
+                    onChange={handleSpectacleChange}
+                    placeholder="-0.50"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="right.axis"
+                    value={spectaclePrescription.right.axis}
+                    onChange={handleSpectacleChange}
+                    placeholder="180"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="right.visualAcuity"
+                    value={spectaclePrescription.right.visualAcuity}
+                    onChange={handleSpectacleChange}
+                    placeholder="6/6"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+              </tr>
+
+              {/* Left Eye */}
+              <tr>
+                <td className="px-3 py-3 font-medium text-gray-900">Left</td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="left.sph"
+                    value={spectaclePrescription.left.sph}
+                    onChange={handleSpectacleChange}
+                    placeholder="-1.25"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="left.cyl"
+                    value={spectaclePrescription.left.cyl}
+                    onChange={handleSpectacleChange}
+                    placeholder="-0.25"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="left.axis"
+                    value={spectaclePrescription.left.axis}
+                    onChange={handleSpectacleChange}
+                    placeholder="170"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+
+                <td className="px-3 py-3">
+                  <input
+                    type="text"
+                    name="left.visualAcuity"
+                    value={spectaclePrescription.left.visualAcuity}
+                    onChange={handleSpectacleChange}
+                    placeholder="6/6"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Near Addition and PD */}
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="nearAddition"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Near Addition
+            </label>
+
+            <input
+              id="nearAddition"
+              name="nearAddition"
+              type="text"
+              value={spectaclePrescription.nearAddition}
+              onChange={handleSpectacleGeneralChange}
+              placeholder="e.g. +1.50"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="pd"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Pupillary Distance (PD)
+            </label>
+
+            <input
+              id="pd"
+              name="pd"
+              type="text"
+              value={spectaclePrescription.pd}
+              onChange={handleSpectacleGeneralChange}
+              placeholder="e.g. 64 mm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Advice & Follow-up */}
