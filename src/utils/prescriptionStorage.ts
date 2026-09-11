@@ -52,3 +52,38 @@ export function savePrescription(
     });
   }
 }
+
+
+export function updatePrescription(
+  updatedPrescription: Prescription,
+): void {
+  try {
+    const existingPrescriptions = getPrescriptions();
+
+    const prescriptionExists = existingPrescriptions.some(
+      (prescription) => prescription.id === updatedPrescription.id,
+    );
+
+    if (!prescriptionExists) {
+      throw new Error("Prescription not found.");
+    }
+
+    const updatedPrescriptions = existingPrescriptions.map(
+      (prescription) =>
+        prescription.id === updatedPrescription.id
+          ? updatedPrescription
+          : prescription,
+    );
+
+    localStorage.setItem(
+      PRESCRIPTIONS_STORAGE_KEY,
+      JSON.stringify(updatedPrescriptions),
+    );
+  } catch (error) {
+    console.error("Failed to update prescription:", error);
+
+    throw new Error("Unable to update prescription.", {
+      cause: error,
+    });
+  }
+}

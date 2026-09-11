@@ -2,20 +2,22 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { initialPatients } from "../data/patients";
 import { getVisits } from "../utils/visitStorage";
+import { getPrescriptionByVisitId } from "../utils/prescriptionStorage";
 
 function VisitDetails() {
   const { patientId, visitId } = useParams();
   const navigate = useNavigate();
 
   const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === patientId
+    (currentPatient) => currentPatient.id === patientId,
   );
 
   const visit = getVisits().find(
     (currentVisit) =>
-      currentVisit.id === visitId &&
-      currentVisit.patientId === patientId
+      currentVisit.id === visitId && currentVisit.patientId === patientId,
   );
+
+  const prescription = getPrescriptionByVisitId(visitId ?? "");
 
   if (!patient || !visit) {
     return (
@@ -41,8 +43,7 @@ function VisitDetails() {
     );
   }
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString();
+  const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
   return (
     <div className="space-y-6">
@@ -58,24 +59,48 @@ function VisitDetails() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Visit Details
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Visit Details</h1>
 
             <p className="mt-1 text-sm text-gray-500">
               {patient.name} · {patient.patientId}
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate(`/patients/${patient.id}/new-visit`)
-            }
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            + New Visit
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {prescription ? (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
+                  )
+                }
+                className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
+              >
+                View Prescription
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/patients/${patient.id}/visits/${visit.id}/prescription`,
+                  )
+                }
+                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                + New Prescription
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => navigate(`/patients/${patient.id}/new-visit`)}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              + New Visit
+            </button>
+          </div>
         </div>
       </div>
 
@@ -147,23 +172,15 @@ function VisitDetails() {
         <div className="grid min-w-0 gap-6 lg:grid-cols-2">
           {/* Visual Acuity */}
           <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-900">
-              Visual Acuity
-            </h3>
+            <h3 className="font-semibold text-gray-900">Visual Acuity</h3>
 
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[400px] text-sm">
                 <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
                   <tr>
-                    <th className="px-3 py-2 font-medium">
-                      Eye
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      Unaided
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      Aided
-                    </th>
+                    <th className="px-3 py-2 font-medium">Eye</th>
+                    <th className="px-3 py-2 font-medium">Unaided</th>
+                    <th className="px-3 py-2 font-medium">Aided</th>
                   </tr>
                 </thead>
 
@@ -174,13 +191,11 @@ function VisitDetails() {
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.visualAcuity.right.unaided ||
-                        "—"}
+                      {visit.examination.visualAcuity.right.unaided || "—"}
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.visualAcuity.right.aided ||
-                        "—"}
+                      {visit.examination.visualAcuity.right.aided || "—"}
                     </td>
                   </tr>
 
@@ -190,13 +205,11 @@ function VisitDetails() {
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.visualAcuity.left.unaided ||
-                        "—"}
+                      {visit.examination.visualAcuity.left.unaided || "—"}
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.visualAcuity.left.aided ||
-                        "—"}
+                      {visit.examination.visualAcuity.left.aided || "—"}
                     </td>
                   </tr>
                 </tbody>
@@ -237,29 +250,17 @@ function VisitDetails() {
 
           {/* Refraction */}
           <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <h3 className="font-semibold text-gray-900">
-              Refraction
-            </h3>
+            <h3 className="font-semibold text-gray-900">Refraction</h3>
 
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[600px] text-sm">
                 <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
                   <tr>
-                    <th className="px-3 py-2 font-medium">
-                      Eye
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      SPH
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      CYL
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      AXIS
-                    </th>
-                    <th className="px-3 py-2 font-medium">
-                      VA
-                    </th>
+                    <th className="px-3 py-2 font-medium">Eye</th>
+                    <th className="px-3 py-2 font-medium">SPH</th>
+                    <th className="px-3 py-2 font-medium">CYL</th>
+                    <th className="px-3 py-2 font-medium">AXIS</th>
+                    <th className="px-3 py-2 font-medium">VA</th>
                   </tr>
                 </thead>
 
@@ -282,8 +283,7 @@ function VisitDetails() {
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.refraction.right.visualAcuity ||
-                        "—"}
+                      {visit.examination.refraction.right.visualAcuity || "—"}
                     </td>
                   </tr>
 
@@ -305,8 +305,7 @@ function VisitDetails() {
                     </td>
 
                     <td className="px-3 py-3 text-gray-700">
-                      {visit.examination.refraction.left.visualAcuity ||
-                        "—"}
+                      {visit.examination.refraction.left.visualAcuity || "—"}
                     </td>
                   </tr>
                 </tbody>
@@ -316,9 +315,7 @@ function VisitDetails() {
 
           {/* Anterior Segment */}
           <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-900">
-              Anterior Segment
-            </h3>
+            <h3 className="font-semibold text-gray-900">Anterior Segment</h3>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
@@ -345,9 +342,7 @@ function VisitDetails() {
 
           {/* Fundus */}
           <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-900">
-              Fundus
-            </h3>
+            <h3 className="font-semibold text-gray-900">Fundus</h3>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
@@ -376,9 +371,7 @@ function VisitDetails() {
 
       {/* Diagnosis */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Diagnosis
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Diagnosis</h2>
 
         <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">
           {visit.diagnosis || "No diagnosis recorded"}
@@ -387,9 +380,7 @@ function VisitDetails() {
 
       {/* Clinical Notes */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Clinical Notes
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Clinical Notes</h2>
 
         <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">
           {visit.clinicalNotes || "No clinical notes recorded"}

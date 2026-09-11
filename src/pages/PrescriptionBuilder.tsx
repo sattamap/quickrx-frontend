@@ -3,14 +3,60 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { initialPatients } from "../data/patients";
 import { getVisits } from "../utils/visitStorage";
-import type { Prescription, PrescriptionMedicine } from "../types/prescription";
-import { savePrescription } from "../utils/prescriptionStorage";
+import {
+  getPrescriptionByVisitId,
+  savePrescription,
+  updatePrescription,
+} from "../utils/prescriptionStorage";
+
+import type {
+  Prescription,
+  PrescriptionMedicine,
+  SpectaclePrescription,
+} from "../types/prescription";
 
 function PrescriptionBuilder() {
-  const { patientId, visitId } = useParams();
   const navigate = useNavigate();
+  const { patientId, visitId } = useParams<{
+    patientId: string;
+    visitId: string;
+  }>();
 
-  const [medicines, setMedicines] = useState<PrescriptionMedicine[]>([]);
+  /*
+   * Find patient and visit
+   */
+  const patient = initialPatients.find(
+    (currentPatient) => currentPatient.id === patientId,
+  );
+
+  const visit = getVisits().find(
+    (currentVisit) =>
+      currentVisit.id === visitId &&
+      currentVisit.patientId === patientId,
+  );
+
+  /*
+   * Load existing prescription, if this visit already has one.
+   *
+   * This replaces the previous useEffect-based state synchronization.
+   */
+  const existingPrescription = visitId
+    ? getPrescriptionByVisitId(visitId)
+    : undefined;
+
+  /*
+   * Prescription editing state
+   */
+  const [editingPrescriptionId] = useState<string | undefined>(
+    existingPrescription?.id,
+  );
+
+  /*
+   * Medicine state
+   */
+  const [medicines, setMedicines] = useState<PrescriptionMedicine[]>(
+    existingPrescription?.medicines ?? [],
+  );
 
   const [medicineForm, setMedicineForm] = useState({
     name: "",
@@ -22,28 +68,72 @@ function PrescriptionBuilder() {
     instructions: "",
   });
 
-  const [spectaclePrescription, setSpectaclePrescription] = useState({
-    right: {
-      sph: "",
-      cyl: "",
-      axis: "",
-      visualAcuity: "",
-    },
-    left: {
-      sph: "",
-      cyl: "",
-      axis: "",
-      visualAcuity: "",
-    },
-    nearAddition: "",
-    pd: "",
-  });
+  /*
+   * Spectacle prescription state
+   */
+  const [spectaclePrescription, setSpectaclePrescription] =
+    useState<SpectaclePrescription>(
+      existingPrescription?.spectaclePrescription ?? {
+        right: {
+          sph: "",
+          cyl: "",
+          axis: "",
+          visualAcuity: "",
+        },
+        left: {
+          sph: "",
+          cyl: "",
+          axis: "",
+          visualAcuity: "",
+        },
+        nearAddition: "",
+        pd: "",
+      },
+    );
 
-  const [advice, setAdvice] = useState("");
-  const [followUp, setFollowUp] = useState("");
+  /*
+   * Advice and follow-up
+   */
+  const [advice, setAdvice] = useState(
+    existingPrescription?.advice ?? "",
+  );
 
+  const [followUp, setFollowUp] = useState(
+    existingPrescription?.followUp ?? "",
+  );
+
+  /*
+   * If patient or visit cannot be found
+   */
+  if (!patient || !visit) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h1 className="text-lg font-semibold text-red-800">
+          Prescription unavailable
+        </h1>
+
+        <p className="mt-2 text-sm text-red-700">
+          The patient or visit record could not be found.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => navigate("/patients")}
+          className="mt-4 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          Back to Patients
+        </button>
+      </div>
+    );
+  }
+
+  /*
+   * Medicine handlers
+   */
   const handleMedicineChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = event.target;
 
@@ -53,7 +143,9 @@ function PrescriptionBuilder() {
     }));
   };
 
-  const handleAddMedicine = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddMedicine = (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     if (!medicineForm.name.trim()) {
@@ -91,6 +183,9 @@ function PrescriptionBuilder() {
     );
   };
 
+  /*
+   * Spectacle prescription handlers
+   */
   const handleSpectacleChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -101,15 +196,17 @@ function PrescriptionBuilder() {
       "sph" | "cyl" | "axis" | "visualAcuity",
     ];
 
-    if (eye === "right" || eye === "left") {
-      setSpectaclePrescription((current) => ({
-        ...current,
-        [eye]: {
-          ...current[eye],
-          [field]: value,
-        },
-      }));
+    if (eye !== "right" && eye !== "left") {
+      return;
     }
+
+    setSpectaclePrescription((current) => ({
+      ...current,
+      [eye]: {
+        ...current[eye],
+        [field]: value,
+      },
+    }));
   };
 
   const handleSpectacleGeneralChange = (
@@ -123,159 +220,161 @@ function PrescriptionBuilder() {
     }));
   };
 
-const handleSavePrescription = () => {
-  if (!patient || !visit) {
-    window.alert("Patient or visit record could not be found.");
-    return;
-  }
+  /*
+   * Save or update prescription
+   */
+  const handleSavePrescription = () => {
+    if (!patient || !visit) {
+      window.alert(
+        "Patient or visit record could not be found.",
+      );
+      return;
+    }
 
-  if (medicines.length === 0) {
-    window.alert("Please add at least one medicine.");
-    return;
-  }
+    if (medicines.length === 0) {
+      window.alert("Please add at least one medicine.");
+      return;
+    }
 
-  const prescription: Prescription = {
-    id: crypto.randomUUID(),
-    patientId: patient.id,
-    visitId: visit.id,
-    prescriptionDate: new Date().toISOString().split("T")[0],
-    medicines,
-    spectaclePrescription,
-    advice: advice.trim(),
-    followUp: followUp.trim(),
-    createdAt: new Date().toISOString(),
+    const prescription: Prescription = {
+      id: editingPrescriptionId ?? crypto.randomUUID(),
+      patientId: patient.id,
+      visitId: visit.id,
+      prescriptionDate:
+        existingPrescription?.prescriptionDate ??
+        new Date().toISOString().split("T")[0],
+      medicines,
+      spectaclePrescription,
+      advice: advice.trim(),
+      followUp: followUp.trim(),
+      createdAt:
+        existingPrescription?.createdAt ??
+        new Date().toISOString(),
+    };
+
+    try {
+      if (editingPrescriptionId) {
+        updatePrescription(prescription);
+
+        window.alert(
+          "Prescription updated successfully.",
+        );
+      } else {
+        savePrescription(prescription);
+
+        window.alert(
+          "Prescription saved successfully.",
+        );
+      }
+
+      navigate(
+        `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
+      );
+    } catch (error) {
+      console.error(
+        "Failed to save prescription:",
+        error,
+      );
+
+      window.alert(
+        "Unable to save prescription. Please try again.",
+      );
+    }
   };
 
-  try {
-    savePrescription(prescription);
+  return (
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                `/patients/${patient.id}/visits/${visit.id}`,
+              )
+            }
+            className="mb-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            ← Back to Visit
+          </button>
 
-    window.alert("Prescription saved successfully.");
-
-    navigate(`/patients/${patient.id}/visits/${visit.id}`);
-  } catch (error) {
-    console.error("Failed to save prescription:", error);
-    window.alert("Unable to save prescription. Please try again.");
-  }
-};
-  const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === patientId,
-  );
-
-  const visit = getVisits().find(
-    (currentVisit) =>
-      currentVisit.id === visitId && currentVisit.patientId === patientId,
-  );
-
-  if (!patient || !visit) {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => navigate("/patients")}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          ← Back to Patients
-        </button>
-
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-          <h1 className="text-lg font-semibold text-red-800">
-            Prescription context not found
+          <h1 className="text-2xl font-bold text-gray-900">
+            {editingPrescriptionId
+              ? "Edit Prescription"
+              : "New Prescription"}
           </h1>
 
-          <p className="mt-1 text-sm text-red-600">
-            The patient or visit record could not be found.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <button
-          type="button"
-          onClick={() => navigate(`/patients/${patient.id}/visits/${visit.id}`)}
-          className="mb-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          ← Back to Visit
-        </button>
-
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Prescription</h1>
-
           <p className="mt-1 text-sm text-gray-500">
-            Create prescription for {patient.name} ({patient.patientId})
+            Create a prescription for this patient visit.
           </p>
         </div>
       </div>
 
       {/* Patient & Visit Summary */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Patient & Visit</h2>
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Patient & Visit
+        </h2>
 
-        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Patient
             </p>
-
             <p className="mt-1 text-sm font-medium text-gray-900">
               {patient.name}
             </p>
           </div>
 
           <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Patient ID
             </p>
-
-            <p className="mt-1 text-sm text-gray-700">{patient.patientId}</p>
+            <p className="mt-1 text-sm text-gray-900">
+              {patient.patientId}
+            </p>
           </div>
 
           <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Visit Date
             </p>
-
-            <p className="mt-1 text-sm text-gray-700">
-              {new Date(visit.visitDate).toLocaleDateString()}
+            <p className="mt-1 text-sm text-gray-900">
+              {visit.visitDate}
             </p>
           </div>
 
           <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Diagnosis
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Age
             </p>
-
-            <p className="mt-1 text-sm text-gray-700">
-              {visit.diagnosis || "Not recorded"}
+            <p className="mt-1 text-sm text-gray-900">
+              {visit.ageAtVisit} years
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Medicines */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Medicines</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Medicines
+          </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Add medicines to this prescription.
+            Add one or more medicines to the prescription.
           </p>
         </div>
 
-        {/* Add Medicine Form */}
         <form
           onSubmit={handleAddMedicine}
-          className="mt-5 rounded-lg bg-gray-50 p-4"
+          className="mt-5 space-y-5"
         >
-          <h3 className="text-sm font-semibold text-gray-900">Add Medicine</h3>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2">
             {/* Medicine Name */}
-            <div className="lg:col-span-2">
+            <div>
               <label
                 htmlFor="medicine-name"
                 className="mb-1.5 block text-sm font-medium text-gray-700"
@@ -290,7 +389,7 @@ const handleSavePrescription = () => {
                 value={medicineForm.name}
                 onChange={handleMedicineChange}
                 placeholder="e.g. Moxifloxacin"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -310,7 +409,7 @@ const handleSavePrescription = () => {
                 value={medicineForm.strength}
                 onChange={handleMedicineChange}
                 placeholder="e.g. 0.5%"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -332,7 +431,9 @@ const handleSavePrescription = () => {
               >
                 <option value="">Select form</option>
                 <option value="Eye Drop">Eye Drop</option>
-                <option value="Eye Ointment">Eye Ointment</option>
+                <option value="Eye Ointment">
+                  Eye Ointment
+                </option>
                 <option value="Tablet">Tablet</option>
                 <option value="Capsule">Capsule</option>
                 <option value="Syrup">Syrup</option>
@@ -356,7 +457,7 @@ const handleSavePrescription = () => {
                 value={medicineForm.dose}
                 onChange={handleMedicineChange}
                 placeholder="e.g. 1 drop"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -377,14 +478,30 @@ const handleSavePrescription = () => {
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select frequency</option>
-                <option value="Once daily">Once daily</option>
-                <option value="Twice daily">Twice daily</option>
-                <option value="Three times daily">Three times daily</option>
-                <option value="Four times daily">Four times daily</option>
-                <option value="Every 2 hours">Every 2 hours</option>
-                <option value="Every 4 hours">Every 4 hours</option>
-                <option value="At bedtime">At bedtime</option>
-                <option value="As directed">As directed</option>
+                <option value="Once daily">
+                  Once daily
+                </option>
+                <option value="Twice daily">
+                  Twice daily
+                </option>
+                <option value="Three times daily">
+                  Three times daily
+                </option>
+                <option value="Four times daily">
+                  Four times daily
+                </option>
+                <option value="Every 2 hours">
+                  Every 2 hours
+                </option>
+                <option value="Every 4 hours">
+                  Every 4 hours
+                </option>
+                <option value="At bedtime">
+                  At bedtime
+                </option>
+                <option value="As directed">
+                  As directed
+                </option>
               </select>
             </div>
 
@@ -404,118 +521,171 @@ const handleSavePrescription = () => {
                 value={medicineForm.duration}
                 onChange={handleMedicineChange}
                 placeholder="e.g. 7 days"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
-            </div>
-
-            {/* Instructions */}
-            <div className="md:col-span-2 lg:col-span-3">
-              <label
-                htmlFor="medicine-instructions"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Instructions
-              </label>
-
-              <input
-                id="medicine-instructions"
-                name="instructions"
-                type="text"
-                value={medicineForm.instructions}
-                onChange={handleMedicineChange}
-                placeholder="e.g. Shake well before use"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Add Button */}
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                + Add Medicine
-              </button>
             </div>
           </div>
+
+          {/* Instructions */}
+          <div>
+            <label
+              htmlFor="medicine-instructions"
+              className="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+              Instructions
+            </label>
+
+            <input
+              id="medicine-instructions"
+              name="instructions"
+              type="text"
+              value={medicineForm.instructions}
+              onChange={handleMedicineChange}
+              placeholder="e.g. Shake well before use"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            + Add Medicine
+          </button>
         </form>
 
-        {/* Medicine List */}
+        {/* Added Medicines */}
         {medicines.length > 0 && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 border-t border-gray-200 pt-5">
             <h3 className="text-sm font-semibold text-gray-900">
               Added Medicines
             </h3>
 
-            {medicines.map((medicine, index) => (
-              <div
-                key={medicine.id}
-                className="rounded-lg border border-gray-200 p-4"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {index + 1}. {medicine.name}
-                      {medicine.strength && ` ${medicine.strength}`}
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                      {medicine.form || "—"} · {medicine.dose || "—"} ·{" "}
-                      {medicine.frequency || "—"} · {medicine.duration || "—"}
-                    </p>
-
-                    {medicine.instructions && (
-                      <p className="mt-2 text-sm text-gray-500">
-                        <span className="font-medium">Instructions:</span>{" "}
-                        {medicine.instructions}
+            <div className="mt-3 space-y-3">
+              {medicines.map((medicine, index) => (
+                <div
+                  key={medicine.id}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">
+                        {index + 1}. {medicine.name}
                       </p>
-                    )}
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveMedicine(medicine.id)}
-                    className="self-start text-sm font-medium text-red-600 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
+                      <div className="mt-2 grid gap-2 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-3">
+                        {medicine.strength && (
+                          <p>
+                            <span className="font-medium">
+                              Strength:
+                            </span>{" "}
+                            {medicine.strength}
+                          </p>
+                        )}
+
+                        {medicine.form && (
+                          <p>
+                            <span className="font-medium">
+                              Form:
+                            </span>{" "}
+                            {medicine.form}
+                          </p>
+                        )}
+
+                        {medicine.dose && (
+                          <p>
+                            <span className="font-medium">
+                              Dose:
+                            </span>{" "}
+                            {medicine.dose}
+                          </p>
+                        )}
+
+                        {medicine.frequency && (
+                          <p>
+                            <span className="font-medium">
+                              Frequency:
+                            </span>{" "}
+                            {medicine.frequency}
+                          </p>
+                        )}
+
+                        {medicine.duration && (
+                          <p>
+                            <span className="font-medium">
+                              Duration:
+                            </span>{" "}
+                            {medicine.duration}
+                          </p>
+                        )}
+
+                        {medicine.instructions && (
+                          <p className="sm:col-span-2 lg:col-span-3">
+                            <span className="font-medium">
+                              Instructions:
+                            </span>{" "}
+                            {medicine.instructions}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemoveMedicine(medicine.id)
+                      }
+                      className="shrink-0 text-sm font-medium text-red-600 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Spectacle Prescription */}
-      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Spectacle Prescription
-        </h2>
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Spectacle Prescription
+          </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
-          Enter the spectacle prescription for each eye.
-        </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Enter the spectacle prescription for each eye.
+          </p>
+        </div>
 
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[700px] text-sm">
-            <thead className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-3 py-3 font-medium">Eye</th>
-
-                <th className="px-3 py-3 font-medium">SPH</th>
-
-                <th className="px-3 py-3 font-medium">CYL</th>
-
-                <th className="px-3 py-3 font-medium">AXIS</th>
-
-                <th className="px-3 py-3 font-medium">VA</th>
+          <table className="min-w-[700px] w-full border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 text-left">
+                <th className="px-3 py-3 text-sm font-semibold text-gray-700">
+                  Eye
+                </th>
+                <th className="px-3 py-3 text-sm font-semibold text-gray-700">
+                  SPH
+                </th>
+                <th className="px-3 py-3 text-sm font-semibold text-gray-700">
+                  CYL
+                </th>
+                <th className="px-3 py-3 text-sm font-semibold text-gray-700">
+                  AXIS
+                </th>
+                <th className="px-3 py-3 text-sm font-semibold text-gray-700">
+                  Visual Acuity
+                </th>
               </tr>
             </thead>
 
             <tbody>
-              {/* Right Eye */}
               <tr className="border-b border-gray-100">
-                <td className="px-3 py-3 font-medium text-gray-900">Right</td>
+                <td className="px-3 py-3 text-sm font-medium text-gray-900">
+                  Right Eye
+                </td>
 
                 <td className="px-3 py-3">
                   <input
@@ -523,8 +693,8 @@ const handleSavePrescription = () => {
                     name="right.sph"
                     value={spectaclePrescription.right.sph}
                     onChange={handleSpectacleChange}
-                    placeholder="-1.50"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="SPH"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -534,8 +704,8 @@ const handleSavePrescription = () => {
                     name="right.cyl"
                     value={spectaclePrescription.right.cyl}
                     onChange={handleSpectacleChange}
-                    placeholder="-0.50"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="CYL"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -545,8 +715,8 @@ const handleSavePrescription = () => {
                     name="right.axis"
                     value={spectaclePrescription.right.axis}
                     onChange={handleSpectacleChange}
-                    placeholder="180"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="AXIS"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -554,17 +724,20 @@ const handleSavePrescription = () => {
                   <input
                     type="text"
                     name="right.visualAcuity"
-                    value={spectaclePrescription.right.visualAcuity}
+                    value={
+                      spectaclePrescription.right.visualAcuity
+                    }
                     onChange={handleSpectacleChange}
                     placeholder="6/6"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full min-w-[120px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
               </tr>
 
-              {/* Left Eye */}
               <tr>
-                <td className="px-3 py-3 font-medium text-gray-900">Left</td>
+                <td className="px-3 py-3 text-sm font-medium text-gray-900">
+                  Left Eye
+                </td>
 
                 <td className="px-3 py-3">
                   <input
@@ -572,8 +745,8 @@ const handleSavePrescription = () => {
                     name="left.sph"
                     value={spectaclePrescription.left.sph}
                     onChange={handleSpectacleChange}
-                    placeholder="-1.25"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="SPH"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -583,8 +756,8 @@ const handleSavePrescription = () => {
                     name="left.cyl"
                     value={spectaclePrescription.left.cyl}
                     onChange={handleSpectacleChange}
-                    placeholder="-0.25"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="CYL"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -594,8 +767,8 @@ const handleSavePrescription = () => {
                     name="left.axis"
                     value={spectaclePrescription.left.axis}
                     onChange={handleSpectacleChange}
-                    placeholder="170"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="AXIS"
+                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
 
@@ -603,10 +776,12 @@ const handleSavePrescription = () => {
                   <input
                     type="text"
                     name="left.visualAcuity"
-                    value={spectaclePrescription.left.visualAcuity}
+                    value={
+                      spectaclePrescription.left.visualAcuity
+                    }
                     onChange={handleSpectacleChange}
                     placeholder="6/6"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full min-w-[120px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </td>
               </tr>
@@ -614,55 +789,57 @@ const handleSavePrescription = () => {
           </table>
         </div>
 
-        {/* Near Addition and PD */}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {/* Near Addition */}
           <div>
             <label
-              htmlFor="nearAddition"
+              htmlFor="near-addition"
               className="mb-1.5 block text-sm font-medium text-gray-700"
             >
               Near Addition
             </label>
 
             <input
-              id="nearAddition"
-              name="nearAddition"
+              id="near-addition"
               type="text"
+              name="nearAddition"
               value={spectaclePrescription.nearAddition}
               onChange={handleSpectacleGeneralChange}
-              placeholder="e.g. +1.50"
+              placeholder="e.g. +2.00"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
+          {/* PD */}
           <div>
             <label
               htmlFor="pd"
               className="mb-1.5 block text-sm font-medium text-gray-700"
             >
-              Pupillary Distance (PD)
+              PD
             </label>
 
             <input
               id="pd"
-              name="pd"
               type="text"
+              name="pd"
               value={spectaclePrescription.pd}
               onChange={handleSpectacleGeneralChange}
-              placeholder="e.g. 64 mm"
+              placeholder="e.g. 62 mm"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Advice & Follow-up */}
-      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">
           Advice & Follow-up
         </h2>
 
         <div className="mt-5 space-y-5">
+          {/* Advice */}
           <div>
             <label
               htmlFor="advice"
@@ -674,38 +851,48 @@ const handleSavePrescription = () => {
             <textarea
               id="advice"
               value={advice}
-              onChange={(event) => setAdvice(event.target.value)}
+              onChange={(event) =>
+                setAdvice(event.target.value)
+              }
               rows={4}
-              placeholder="Enter advice for the patient..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Enter patient advice..."
+              className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
+          {/* Follow-up */}
           <div>
             <label
-              htmlFor="followUp"
+              htmlFor="follow-up"
               className="mb-1.5 block text-sm font-medium text-gray-700"
             >
               Follow-up
             </label>
 
             <input
-              id="followUp"
+              id="follow-up"
               type="text"
               value={followUp}
-              onChange={(event) => setFollowUp(event.target.value)}
-              placeholder="e.g. Review after 4 weeks"
+              onChange={(event) =>
+                setFollowUp(event.target.value)
+              }
+              placeholder="e.g. Follow up after 2 weeks"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </div>
-      </div>
+      </section>
 
+      {/* Bottom Actions */}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
-          onClick={() => navigate(`/patients/${patient.id}/visits/${visit.id}`)}
-          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          onClick={() =>
+            navigate(
+              `/patients/${patient.id}/visits/${visit.id}`,
+            )
+          }
+          className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Cancel
         </button>
@@ -715,7 +902,9 @@ const handleSavePrescription = () => {
           onClick={handleSavePrescription}
           className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
         >
-          Save Prescription
+          {editingPrescriptionId
+            ? "Update Prescription"
+            : "Save Prescription"}
         </button>
       </div>
     </div>
