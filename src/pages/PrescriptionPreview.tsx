@@ -9,29 +9,22 @@ function PrescriptionPreview() {
   const navigate = useNavigate();
 
   const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === patientId
+    (currentPatient) => currentPatient.id === patientId,
   );
 
   const visit = getVisits().find(
     (currentVisit) =>
-      currentVisit.id === visitId &&
-      currentVisit.patientId === patientId
+      currentVisit.id === visitId && currentVisit.patientId === patientId,
   );
 
-  const prescription = visitId
-    ? getPrescriptionByVisitId(visitId)
-    : undefined;
+  const prescription = visitId ? getPrescriptionByVisitId(visitId) : undefined;
 
   if (!patient || !visit || !prescription) {
     return (
       <div className="space-y-4">
         <button
           type="button"
-          onClick={() =>
-            navigate(
-              `/patients/${patientId}/visits/${visitId}`
-            )
-          }
+          onClick={() => navigate(`/patients/${patientId}/visits/${visitId}`)}
           className="text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           ← Back to Visit
@@ -53,14 +46,12 @@ function PrescriptionPreview() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="print:hidden flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <button
             type="button"
             onClick={() =>
-              navigate(
-                `/patients/${patient.id}/visits/${visit.id}`
-              )
+              navigate(`/patients/${patient.id}/visits/${visit.id}`)
             }
             className="mb-3 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
@@ -78,6 +69,7 @@ function PrescriptionPreview() {
 
         <button
           type="button"
+          onClick={() => window.print()}
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
         >
           Print Prescription
@@ -85,24 +77,18 @@ function PrescriptionPreview() {
       </div>
 
       {/* Prescription */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm print:border-0 print:p-0 print:shadow-none sm:p-8">
         {/* Doctor Header */}
         <div className="border-b border-gray-300 pb-5 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            QuickRx Eye Care
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900">QuickRx Eye Care</h2>
 
           <p className="mt-1 text-sm text-gray-500">
             Ophthalmology Prescription
           </p>
 
-          <p className="mt-2 text-sm font-medium text-gray-700">
-            Dr. Doctor
-          </p>
+          <p className="mt-2 text-sm font-medium text-gray-700">Dr. Doctor</p>
 
-          <p className="text-xs text-gray-500">
-            Ophthalmologist
-          </p>
+          <p className="text-xs text-gray-500">Ophthalmologist</p>
         </div>
 
         {/* Patient Information */}
@@ -136,9 +122,7 @@ function PrescriptionPreview() {
             <div>
               <p className="text-xs text-gray-500">Date</p>
               <p className="mt-1 text-sm text-gray-700">
-                {new Date(
-                  prescription.prescriptionDate
-                ).toLocaleDateString()}
+                {new Date(prescription.prescriptionDate).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -150,9 +134,7 @@ function PrescriptionPreview() {
             Diagnosis
           </h3>
 
-          <p className="mt-2 text-sm text-gray-700">
-            {visit.diagnosis || "—"}
-          </p>
+          <p className="mt-2 text-sm text-gray-700">{visit.diagnosis || "—"}</p>
         </div>
 
         {/* Medicines */}
@@ -238,9 +220,7 @@ function PrescriptionPreview() {
 
               <tbody>
                 <tr className="border-b border-gray-100">
-                  <td className="px-3 py-3 font-medium text-gray-900">
-                    Right
-                  </td>
+                  <td className="px-3 py-3 font-medium text-gray-900">Right</td>
                   <td className="px-3 py-3">
                     {prescription.spectaclePrescription.right.sph || "—"}
                   </td>
@@ -251,14 +231,13 @@ function PrescriptionPreview() {
                     {prescription.spectaclePrescription.right.axis || "—"}
                   </td>
                   <td className="px-3 py-3">
-                    {prescription.spectaclePrescription.right.visualAcuity || "—"}
+                    {prescription.spectaclePrescription.right.visualAcuity ||
+                      "—"}
                   </td>
                 </tr>
 
                 <tr>
-                  <td className="px-3 py-3 font-medium text-gray-900">
-                    Left
-                  </td>
+                  <td className="px-3 py-3 font-medium text-gray-900">Left</td>
                   <td className="px-3 py-3">
                     {prescription.spectaclePrescription.left.sph || "—"}
                   </td>
@@ -269,7 +248,8 @@ function PrescriptionPreview() {
                     {prescription.spectaclePrescription.left.axis || "—"}
                   </td>
                   <td className="px-3 py-3">
-                    {prescription.spectaclePrescription.left.visualAcuity || "—"}
+                    {prescription.spectaclePrescription.left.visualAcuity ||
+                      "—"}
                   </td>
                 </tr>
               </tbody>
@@ -319,13 +299,9 @@ function PrescriptionPreview() {
 
         {/* Footer */}
         <div className="mt-8 border-t border-gray-200 pt-6 text-right">
-          <p className="text-sm font-medium text-gray-900">
-            Dr. Doctor
-          </p>
+          <p className="text-sm font-medium text-gray-900">Dr. Doctor</p>
 
-          <p className="text-xs text-gray-500">
-            Ophthalmologist
-          </p>
+          <p className="text-xs text-gray-500">Ophthalmologist</p>
         </div>
       </div>
     </div>
