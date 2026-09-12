@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { initialPatients } from "../data/patients";
@@ -8,6 +8,7 @@ import {
   savePrescription,
   updatePrescription,
 } from "../utils/prescriptionStorage";
+import { searchMedicines, type Medicine } from "../utils/medicineData";
 
 import type {
   Prescription,
@@ -31,8 +32,7 @@ function PrescriptionBuilder() {
 
   const visit = getVisits().find(
     (currentVisit) =>
-      currentVisit.id === visitId &&
-      currentVisit.patientId === patientId,
+      currentVisit.id === visitId && currentVisit.patientId === patientId,
   );
 
   /*
@@ -69,6 +69,30 @@ function PrescriptionBuilder() {
   });
 
   /*
+   * Medicine name autocomplete state
+   */
+  const [medicineSuggestions, setMedicineSuggestions] = useState<Medicine[]>(
+    [],
+  );
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const medicineNameFieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        medicineNameFieldRef.current &&
+        !medicineNameFieldRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /*
    * Spectacle prescription state
    */
   const [spectaclePrescription, setSpectaclePrescription] =
@@ -94,9 +118,7 @@ function PrescriptionBuilder() {
   /*
    * Advice and follow-up
    */
-  const [advice, setAdvice] = useState(
-    existingPrescription?.advice ?? "",
-  );
+  const [advice, setAdvice] = useState(existingPrescription?.advice ?? "");
 
   const [followUp, setFollowUp] = useState(
     existingPrescription?.followUp ?? "",
@@ -131,9 +153,7 @@ function PrescriptionBuilder() {
    * Medicine handlers
    */
   const handleMedicineChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
-    >,
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target;
 
@@ -141,11 +161,25 @@ function PrescriptionBuilder() {
       ...current,
       [name]: value,
     }));
+
+    if (name === "name") {
+      setMedicineSuggestions(searchMedicines(value));
+      setShowSuggestions(true);
+    }
   };
 
-  const handleAddMedicine = (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSelectMedicine = (medicine: Medicine) => {
+    setMedicineForm((current) => ({
+      ...current,
+      name: medicine.name,
+      strength: medicine.strength,
+    }));
+
+    setShowSuggestions(false);
+    setMedicineSuggestions([]);
+  };
+
+  const handleAddMedicine = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!medicineForm.name.trim()) {
@@ -225,9 +259,7 @@ function PrescriptionBuilder() {
    */
   const handleSavePrescription = () => {
     if (!patient || !visit) {
-      window.alert(
-        "Patient or visit record could not be found.",
-      );
+      window.alert("Patient or visit record could not be found.");
       return;
     }
 
@@ -247,38 +279,27 @@ function PrescriptionBuilder() {
       spectaclePrescription,
       advice: advice.trim(),
       followUp: followUp.trim(),
-      createdAt:
-        existingPrescription?.createdAt ??
-        new Date().toISOString(),
+      createdAt: existingPrescription?.createdAt ?? new Date().toISOString(),
     };
 
     try {
       if (editingPrescriptionId) {
         updatePrescription(prescription);
 
-        window.alert(
-          "Prescription updated successfully.",
-        );
+        window.alert("Prescription updated successfully.");
       } else {
         savePrescription(prescription);
 
-        window.alert(
-          "Prescription saved successfully.",
-        );
+        window.alert("Prescription saved successfully.");
       }
 
       navigate(
         `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
       );
     } catch (error) {
-      console.error(
-        "Failed to save prescription:",
-        error,
-      );
+      console.error("Failed to save prescription:", error);
 
-      window.alert(
-        "Unable to save prescription. Please try again.",
-      );
+      window.alert("Unable to save prescription. Please try again.");
     }
   };
 
@@ -290,9 +311,7 @@ function PrescriptionBuilder() {
           <button
             type="button"
             onClick={() =>
-              navigate(
-                `/patients/${patient.id}/visits/${visit.id}`,
-              )
+              navigate(`/patients/${patient.id}/visits/${visit.id}`)
             }
             className="mb-2 text-sm font-medium text-gray-600 hover:text-gray-900"
           >
@@ -300,9 +319,7 @@ function PrescriptionBuilder() {
           </button>
 
           <h1 className="text-2xl font-bold text-gray-900">
-            {editingPrescriptionId
-              ? "Edit Prescription"
-              : "New Prescription"}
+            {editingPrescriptionId ? "Edit Prescription" : "New Prescription"}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
@@ -313,9 +330,7 @@ function PrescriptionBuilder() {
 
       {/* Patient & Visit Summary */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Patient & Visit
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Patient & Visit</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -331,18 +346,14 @@ function PrescriptionBuilder() {
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Patient ID
             </p>
-            <p className="mt-1 text-sm text-gray-900">
-              {patient.patientId}
-            </p>
+            <p className="mt-1 text-sm text-gray-900">{patient.patientId}</p>
           </div>
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Visit Date
             </p>
-            <p className="mt-1 text-sm text-gray-900">
-              {visit.visitDate}
-            </p>
+            <p className="mt-1 text-sm text-gray-900">{visit.visitDate}</p>
           </div>
 
           <div>
@@ -359,22 +370,17 @@ function PrescriptionBuilder() {
       {/* Medicines */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Medicines
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Medicines</h2>
 
           <p className="mt-1 text-sm text-gray-500">
             Add one or more medicines to the prescription.
           </p>
         </div>
 
-        <form
-          onSubmit={handleAddMedicine}
-          className="mt-5 space-y-5"
-        >
+        <form onSubmit={handleAddMedicine} className="mt-5 space-y-5">
           <div className="grid min-w-0 gap-4 md:grid-cols-2">
             {/* Medicine Name */}
-            <div>
+            <div className="relative" ref={medicineNameFieldRef}>
               <label
                 htmlFor="medicine-name"
                 className="mb-1.5 block text-sm font-medium text-gray-700"
@@ -386,11 +392,46 @@ function PrescriptionBuilder() {
                 id="medicine-name"
                 name="name"
                 type="text"
+                autoComplete="off"
                 value={medicineForm.name}
                 onChange={handleMedicineChange}
+                onFocus={() => {
+                  if (medicineForm.name.trim()) {
+                    setMedicineSuggestions(
+                      searchMedicines(medicineForm.name),
+                    );
+                    setShowSuggestions(true);
+                  }
+                }}
                 placeholder="e.g. Moxifloxacin"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
+
+              {showSuggestions && medicineSuggestions.length > 0 && (
+                <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {medicineSuggestions.map((medicine) => (
+                    <li key={medicine.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectMedicine(medicine)}
+                        className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-blue-50"
+                      >
+                        <span className="font-medium text-gray-900">
+                          {medicine.name}{" "}
+                          <span className="font-normal text-gray-500">
+                            ({medicine.strength})
+                          </span>
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {medicine.generic} · {medicine.company}
+                          {medicine.price !== null &&
+                            ` · ৳${medicine.price}`}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Strength */}
@@ -431,9 +472,7 @@ function PrescriptionBuilder() {
               >
                 <option value="">Select form</option>
                 <option value="Eye Drop">Eye Drop</option>
-                <option value="Eye Ointment">
-                  Eye Ointment
-                </option>
+                <option value="Eye Ointment">Eye Ointment</option>
                 <option value="Tablet">Tablet</option>
                 <option value="Capsule">Capsule</option>
                 <option value="Syrup">Syrup</option>
@@ -478,30 +517,27 @@ function PrescriptionBuilder() {
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select frequency</option>
-                <option value="Once daily">
-                  Once daily
-                </option>
-                <option value="Twice daily">
-                  Twice daily
-                </option>
-                <option value="Three times daily">
-                  Three times daily
-                </option>
-                <option value="Four times daily">
-                  Four times daily
-                </option>
-                <option value="Every 2 hours">
-                  Every 2 hours
-                </option>
-                <option value="Every 4 hours">
-                  Every 4 hours
-                </option>
-                <option value="At bedtime">
-                  At bedtime
-                </option>
-                <option value="As directed">
-                  As directed
-                </option>
+
+                <optgroup label="Prescription Pattern">
+                  <option value="1+0+0">1+0+0</option>
+                  <option value="0+1+0">0+1+0</option>
+                  <option value="0+0+1">0+0+1</option>
+                  <option value="1+1+0">1+1+0</option>
+                  <option value="1+0+1">1+0+1</option>
+                  <option value="0+1+1">0+1+1</option>
+                  <option value="1+1+1">1+1+1</option>
+                </optgroup>
+
+                <optgroup label="Standard Frequency">
+                  <option value="Once daily">Once daily</option>
+                  <option value="Twice daily">Twice daily</option>
+                  <option value="Three times daily">Three times daily</option>
+                  <option value="Four times daily">Four times daily</option>
+                  <option value="Every 2 hours">Every 2 hours</option>
+                  <option value="Every 4 hours">Every 4 hours</option>
+                  <option value="At bedtime">At bedtime</option>
+                  <option value="As directed">As directed</option>
+                </optgroup>
               </select>
             </div>
 
@@ -576,54 +612,42 @@ function PrescriptionBuilder() {
                       <div className="mt-2 grid gap-2 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-3">
                         {medicine.strength && (
                           <p>
-                            <span className="font-medium">
-                              Strength:
-                            </span>{" "}
+                            <span className="font-medium">Strength:</span>{" "}
                             {medicine.strength}
                           </p>
                         )}
 
                         {medicine.form && (
                           <p>
-                            <span className="font-medium">
-                              Form:
-                            </span>{" "}
+                            <span className="font-medium">Form:</span>{" "}
                             {medicine.form}
                           </p>
                         )}
 
                         {medicine.dose && (
                           <p>
-                            <span className="font-medium">
-                              Dose:
-                            </span>{" "}
+                            <span className="font-medium">Dose:</span>{" "}
                             {medicine.dose}
                           </p>
                         )}
 
                         {medicine.frequency && (
                           <p>
-                            <span className="font-medium">
-                              Frequency:
-                            </span>{" "}
+                            <span className="font-medium">Frequency:</span>{" "}
                             {medicine.frequency}
                           </p>
                         )}
 
                         {medicine.duration && (
                           <p>
-                            <span className="font-medium">
-                              Duration:
-                            </span>{" "}
+                            <span className="font-medium">Duration:</span>{" "}
                             {medicine.duration}
                           </p>
                         )}
 
                         {medicine.instructions && (
                           <p className="sm:col-span-2 lg:col-span-3">
-                            <span className="font-medium">
-                              Instructions:
-                            </span>{" "}
+                            <span className="font-medium">Instructions:</span>{" "}
                             {medicine.instructions}
                           </p>
                         )}
@@ -632,9 +656,7 @@ function PrescriptionBuilder() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        handleRemoveMedicine(medicine.id)
-                      }
+                      onClick={() => handleRemoveMedicine(medicine.id)}
                       className="shrink-0 text-sm font-medium text-red-600 hover:text-red-700"
                     >
                       Remove
@@ -724,9 +746,7 @@ function PrescriptionBuilder() {
                   <input
                     type="text"
                     name="right.visualAcuity"
-                    value={
-                      spectaclePrescription.right.visualAcuity
-                    }
+                    value={spectaclePrescription.right.visualAcuity}
                     onChange={handleSpectacleChange}
                     placeholder="6/6"
                     className="w-full min-w-[120px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -776,9 +796,7 @@ function PrescriptionBuilder() {
                   <input
                     type="text"
                     name="left.visualAcuity"
-                    value={
-                      spectaclePrescription.left.visualAcuity
-                    }
+                    value={spectaclePrescription.left.visualAcuity}
                     onChange={handleSpectacleChange}
                     placeholder="6/6"
                     className="w-full min-w-[120px] rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -851,9 +869,7 @@ function PrescriptionBuilder() {
             <textarea
               id="advice"
               value={advice}
-              onChange={(event) =>
-                setAdvice(event.target.value)
-              }
+              onChange={(event) => setAdvice(event.target.value)}
               rows={4}
               placeholder="Enter patient advice..."
               className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -873,9 +889,7 @@ function PrescriptionBuilder() {
               id="follow-up"
               type="text"
               value={followUp}
-              onChange={(event) =>
-                setFollowUp(event.target.value)
-              }
+              onChange={(event) => setFollowUp(event.target.value)}
               placeholder="e.g. Follow up after 2 weeks"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
@@ -887,11 +901,7 @@ function PrescriptionBuilder() {
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
-          onClick={() =>
-            navigate(
-              `/patients/${patient.id}/visits/${visit.id}`,
-            )
-          }
+          onClick={() => navigate(`/patients/${patient.id}/visits/${visit.id}`)}
           className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Cancel
@@ -902,9 +912,7 @@ function PrescriptionBuilder() {
           onClick={handleSavePrescription}
           className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
         >
-          {editingPrescriptionId
-            ? "Update Prescription"
-            : "Save Prescription"}
+          {editingPrescriptionId ? "Update Prescription" : "Save Prescription"}
         </button>
       </div>
     </div>
