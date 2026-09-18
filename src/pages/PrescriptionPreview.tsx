@@ -1,28 +1,43 @@
 import { useNavigate, useParams } from "react-router-dom";
 
-import { initialPatients } from "../data/patients";
-import { getVisits } from "../utils/visitStorage";
-import { getPrescriptionByVisitId } from "../utils/prescriptionStorage";
+import { getPatientById } from "../services/patientService";
+import { getVisitForPatient } from "../services/visitService";
+import { getPrescriptionByVisitId } from "../services/prescriptionService";
+import { useAsyncData } from "../hooks/useAsyncData";
 
 function PrescriptionPreview() {
   const { patientId, visitId } = useParams();
   const navigate = useNavigate();
 
-  const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === patientId,
-  );
+  const { data, isLoading, error } = useAsyncData(async () => {
+    if (!patientId || !visitId) {
+      return undefined;
+    }
 
-  const visit = getVisits().find(
-    (currentVisit) =>
-      currentVisit.id === visitId &&
-      currentVisit.patientId === patientId,
-  );
+    const [patient, visit, prescription] = await Promise.all([
+      getPatientById(patientId),
+      getVisitForPatient(patientId, visitId),
+      getPrescriptionByVisitId(visitId),
+    ]);
 
-  const prescription = visitId
-    ? getPrescriptionByVisitId(visitId)
-    : undefined;
+    if (!patient || !visit || !prescription) {
+      return undefined;
+    }
 
-  if (!patient || !visit || !prescription) {
+    return { patient, visit, prescription };
+  }, [patientId, visitId]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <p className="text-sm text-gray-500">Loading prescription...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
     return (
       <div className="space-y-4">
         <button
@@ -41,29 +56,41 @@ function PrescriptionPreview() {
 
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <h1 className="text-lg font-semibold text-red-800">
-            Prescription not found
+            {error ? "Unable to load prescription" : "Prescription not found"}
           </h1>
 
           <p className="mt-1 text-sm text-red-600">
-            The prescription record could not be found for
-            this visit.
+            {error ??
+              "The prescription record could not be found for this visit."}
           </p>
         </div>
       </div>
     );
   }
 
+  const { patient, visit, prescription } = data;
+
+  const hasSpectacleData =
+    prescription.spectaclePrescription.right.sph ||
+    prescription.spectaclePrescription.right.cyl ||
+    prescription.spectaclePrescription.right.axis ||
+    prescription.spectaclePrescription.right.visualAcuity ||
+    prescription.spectaclePrescription.left.sph ||
+    prescription.spectaclePrescription.left.cyl ||
+    prescription.spectaclePrescription.left.axis ||
+    prescription.spectaclePrescription.left.visualAcuity ||
+    prescription.spectaclePrescription.nearAddition ||
+    prescription.spectaclePrescription.pd;
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      {/* Page Header */}
-      <div className="print:hidden flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-4xl space-y-6 print:max-w-none">
+      {/* Page Header (screen only) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
           <button
             type="button"
             onClick={() =>
-              navigate(
-                `/patients/${patient.id}/visits/${visit.id}`,
-              )
+              navigate(`/patients/${patient.id}/visits/${visit.id}`)
             }
             className="mb-3 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
@@ -103,324 +130,246 @@ function PrescriptionPreview() {
       </div>
 
       {/* Printable Prescription */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm print:border-0 print:p-0 print:shadow-none sm:p-8">
-        {/* Doctor Header */}
-        <div className="border-b border-gray-300 pb-5 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            QuickRx Eye Care
-          </h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5 text-[13px] leading-snug text-gray-800 shadow-sm sm:p-7 print:border-0 print:p-3 print:text-[11px] print:shadow-none">
+        {/* Doctor / Clinic Header */}
+        <div className="flex items-start justify-between gap-4 border-b-2 border-gray-800 pb-3">
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
+              Dr. Romel Chakma
+            </h1>
+            <p className="mt-0.5 text-xs font-semibold text-gray-700 sm:text-sm">
+              Eye Specialist &amp; Surgeon
+            </p>
+            <p className="mt-0.5 text-[11px] text-gray-600 sm:text-xs">
+              MBBS, MS (Ophthalmology), BCS (Health)
+            </p>
+            <p className="text-[11px] text-gray-600 sm:text-xs">
+              Trained in Cataract Microsurgery — National Institute of
+              Ophthalmology (NIO)
+            </p>
+          </div>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Ophthalmology Prescription
-          </p>
-
-          <p className="mt-2 text-sm font-medium text-gray-700">
-            Dr. Doctor
-          </p>
-
-          <p className="text-xs text-gray-500">
-            Ophthalmologist
-          </p>
-        </div>
-
-        {/* Patient Information */}
-        <div className="border-b border-gray-200 py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Patient Information
-          </h3>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-4">
-            <div>
-              <p className="text-xs text-gray-500">
-                Patient
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-gray-900">
-                {patient.name}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">
-                Patient ID
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-gray-900">
-                {patient.patientId}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">
-                Age
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                {visit.ageAtVisit} years
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">
-                Date
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                {new Date(
-                  prescription.prescriptionDate,
-                ).toLocaleDateString()}
-              </p>
-            </div>
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-bold text-gray-900">
+              QuickRx Eye Care
+            </p>
+            <p className="text-[11px] text-gray-500">Ophthalmology Clinic</p>
           </div>
         </div>
 
-        {/* Diagnosis */}
-        <div className="border-b border-gray-200 py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Diagnosis
-          </h3>
+        {/* Patient Info Strip */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-200 py-2 text-xs sm:text-sm">
+          <p>
+            <span className="text-gray-500">Patient:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {patient.name}
+            </span>
+          </p>
 
-          <p className="mt-2 whitespace-pre-line text-sm text-gray-700">
-            {visit.diagnosis || "—"}
+          <p>
+            <span className="text-gray-500">ID:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {patient.patientId}
+            </span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">Age:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {visit.ageAtVisit} yrs
+            </span>
+          </p>
+
+          <p className="ml-auto">
+            <span className="text-gray-500">Date:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {new Date(prescription.prescriptionDate).toLocaleDateString(
+                "en-GB",
+              )}
+            </span>
           </p>
         </div>
 
-        {/* Medicines */}
-        <div className="border-b border-gray-200 py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Medicines
-          </h3>
+        {/* Body: two-column clinical layout */}
+        <div className="grid grid-cols-1 gap-4 py-3 sm:grid-cols-12 sm:gap-5">
+          {/* Left column: diagnosis + spectacle Rx */}
+          <div className="space-y-4 sm:col-span-4 sm:border-r sm:border-gray-200 sm:pr-4">
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Diagnosis
+              </h3>
+              <p className="mt-1 whitespace-pre-line text-xs text-gray-800 sm:text-sm">
+                {visit.diagnosis || "—"}
+              </p>
+            </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="px-3 py-3">
-                    Medicine
-                  </th>
+            {hasSpectacleData && (
+              <div>
+                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Spectacle Rx
+                </h3>
 
-                  <th className="px-3 py-3">
-                    Form
-                  </th>
-
-                  <th className="px-3 py-3">
-                    Dose
-                  </th>
-
-                  <th className="px-3 py-3">
-                    Frequency
-                  </th>
-
-                  <th className="px-3 py-3">
-                    Duration
-                  </th>
-
-                  <th className="px-3 py-3">
-                    Instructions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {prescription.medicines.map(
-                  (medicine) => (
-                    <tr
-                      key={medicine.id}
-                      className="border-b border-gray-100 last:border-b-0"
-                    >
-                      <td className="px-3 py-3">
-                        <p className="font-medium text-gray-900">
-                          {medicine.name}
-                        </p>
-
-                        {medicine.strength && (
-                          <p className="text-xs text-gray-500">
-                            {medicine.strength}
-                          </p>
-                        )}
+                <table className="mt-1.5 w-full border-collapse text-[11px] sm:text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-300 text-left text-gray-500">
+                      <th className="py-1 pr-1 font-medium">Eye</th>
+                      <th className="py-1 pr-1 font-medium">SPH</th>
+                      <th className="py-1 pr-1 font-medium">CYL</th>
+                      <th className="py-1 pr-1 font-medium">AXIS</th>
+                      <th className="py-1 font-medium">VA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-1 pr-1 font-semibold text-gray-900">
+                        R
                       </td>
-
-                      <td className="px-3 py-3 text-gray-700">
-                        {medicine.form || "—"}
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.right.sph || "—"}
                       </td>
-
-                      <td className="px-3 py-3 text-gray-700">
-                        {medicine.dose || "—"}
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.right.cyl || "—"}
                       </td>
-
-                      <td className="px-3 py-3 text-gray-700">
-                        {medicine.frequency || "—"}
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.right.axis || "—"}
                       </td>
-
-                      <td className="px-3 py-3 text-gray-700">
-                        {medicine.duration || "—"}
-                      </td>
-
-                      <td className="px-3 py-3 text-gray-700">
-                        {medicine.instructions || "—"}
+                      <td className="py-1 text-gray-700">
+                        {prescription.spectaclePrescription.right
+                          .visualAcuity || "—"}
                       </td>
                     </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
+                    <tr>
+                      <td className="py-1 pr-1 font-semibold text-gray-900">
+                        L
+                      </td>
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.left.sph || "—"}
+                      </td>
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.left.cyl || "—"}
+                      </td>
+                      <td className="py-1 pr-1 text-gray-700">
+                        {prescription.spectaclePrescription.left.axis || "—"}
+                      </td>
+                      <td className="py-1 text-gray-700">
+                        {prescription.spectaclePrescription.left
+                          .visualAcuity || "—"}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-700 sm:text-xs">
+                  <p>
+                    <span className="text-gray-500">Add:</span>{" "}
+                    {prescription.spectaclePrescription.nearAddition || "—"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">PD:</span>{" "}
+                    {prescription.spectaclePrescription.pd
+                      ? `${prescription.spectaclePrescription.pd} mm`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right column: Rx / medicines */}
+          <div className="sm:col-span-8">
+            <h3 className="flex items-baseline gap-1.5 text-sm font-bold text-gray-900 sm:text-base">
+              <span className="text-lg font-bold sm:text-xl">℞</span>
+              <span className="sr-only">Medicines</span>
+            </h3>
+
+            {prescription.medicines.length > 0 ? (
+              <ol className="mt-1 space-y-2">
+                {prescription.medicines.map((medicine, index) => (
+                  <li key={medicine.id} className="flex gap-2">
+                    <span className="w-4 shrink-0 text-right text-xs font-semibold text-gray-500 sm:text-sm">
+                      {index + 1}.
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-900 sm:text-sm">
+                        {medicine.name}
+                        {medicine.strength && (
+                          <span className="font-normal text-gray-600">
+                            {" "}
+                            ({medicine.strength})
+                          </span>
+                        )}
+                        {medicine.form && (
+                          <span className="font-normal text-gray-500">
+                            {" "}
+                            — {medicine.form}
+                          </span>
+                        )}
+                      </p>
+
+                      {(medicine.dose ||
+                        medicine.frequency ||
+                        medicine.duration) && (
+                        <p className="text-[11px] text-gray-700 sm:text-xs">
+                          {[medicine.dose, medicine.frequency, medicine.duration]
+                            .filter(Boolean)
+                            .join("  —  ")}
+                        </p>
+                      )}
+
+                      {medicine.instructions && (
+                        <p className="text-[11px] italic text-gray-500 sm:text-xs">
+                          {medicine.instructions}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-1 text-xs text-gray-500">
+                No medicines added.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Spectacle Prescription */}
-        <div className="border-b border-gray-200 py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Spectacle Prescription
-          </h3>
-
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="px-3 py-3">
-                    Eye
-                  </th>
-
-                  <th className="px-3 py-3">
-                    SPH
-                  </th>
-
-                  <th className="px-3 py-3">
-                    CYL
-                  </th>
-
-                  <th className="px-3 py-3">
-                    AXIS
-                  </th>
-
-                  <th className="px-3 py-3">
-                    VA
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr className="border-b border-gray-100">
-                  <td className="px-3 py-3 font-medium text-gray-900">
-                    Right
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.right
-                      .sph || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.right
-                      .cyl || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.right
-                      .axis || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.right
-                      .visualAcuity || "—"}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td className="px-3 py-3 font-medium text-gray-900">
-                    Left
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.left
-                      .sph || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.left
-                      .cyl || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.left
-                      .axis || "—"}
-                  </td>
-
-                  <td className="px-3 py-3 text-gray-700">
-                    {prescription
-                      .spectaclePrescription.left
-                      .visualAcuity || "—"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        {/* Advice & Follow-up — side by side */}
+        <div className="grid grid-cols-1 gap-4 border-t border-gray-200 py-3 sm:grid-cols-2">
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Advice
+            </h3>
+            <p className="mt-1 whitespace-pre-line text-xs text-gray-800 sm:text-sm">
+              {prescription.advice || "—"}
+            </p>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs text-gray-500">
-                Near Addition
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                {prescription
-                  .spectaclePrescription
-                  .nearAddition || "—"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500">
-                PD
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                {prescription.spectaclePrescription.pd
-                  ? `${prescription.spectaclePrescription.pd} mm`
-                  : "—"}
-              </p>
-            </div>
+          <div className="sm:border-l sm:border-gray-200 sm:pl-4">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Follow-up
+            </h3>
+            <p className="mt-1 text-xs text-gray-800 sm:text-sm">
+              {prescription.followUp || "—"}
+            </p>
           </div>
         </div>
 
-        {/* Advice */}
-        <div className="border-b border-gray-200 py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Advice
-          </h3>
-
-          <p className="mt-2 whitespace-pre-line text-sm text-gray-700">
-            {prescription.advice || "—"}
-          </p>
-        </div>
-
-        {/* Follow-up */}
-        <div className="py-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Follow-up
-          </h3>
-
-          <p className="mt-2 text-sm text-gray-700">
-            {prescription.followUp || "—"}
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 border-t border-gray-200 pt-6 text-right">
-          <p className="text-sm font-medium text-gray-900">
-            Dr. Doctor
+        {/* Footer / Signature */}
+        <div className="mt-4 flex items-end justify-between border-t border-gray-200 pt-4">
+          <p className="text-[10px] text-gray-400">
+            Generated by QuickRx — not valid without signature
           </p>
 
-          <p className="text-xs text-gray-500">
-            Ophthalmologist
-          </p>
+          <div className="text-right">
+            <div className="mb-1 h-8 border-b border-gray-400" />
+            <p className="text-xs font-semibold text-gray-900 sm:text-sm">
+              Dr. Romel Chakma
+            </p>
+            <p className="text-[11px] text-gray-500">
+              Eye Specialist &amp; Surgeon
+            </p>
+          </div>
         </div>
       </div>
     </div>

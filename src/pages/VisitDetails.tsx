@@ -1,25 +1,43 @@
 import { useNavigate, useParams } from "react-router-dom";
 
-import { initialPatients } from "../data/patients";
-import { getVisits } from "../utils/visitStorage";
-import { getPrescriptionByVisitId } from "../utils/prescriptionStorage";
+import { getPatientById } from "../services/patientService";
+import { getVisitForPatient } from "../services/visitService";
+import { getPrescriptionByVisitId } from "../services/prescriptionService";
+import { useAsyncData } from "../hooks/useAsyncData";
 
 function VisitDetails() {
   const { patientId, visitId } = useParams();
   const navigate = useNavigate();
 
-  const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === patientId,
-  );
+  const { data, isLoading, error } = useAsyncData(async () => {
+    if (!patientId || !visitId) {
+      return undefined;
+    }
 
-  const visit = getVisits().find(
-    (currentVisit) =>
-      currentVisit.id === visitId && currentVisit.patientId === patientId,
-  );
+    const [patient, visit, prescription] = await Promise.all([
+      getPatientById(patientId),
+      getVisitForPatient(patientId, visitId),
+      getPrescriptionByVisitId(visitId),
+    ]);
 
-  const prescription = getPrescriptionByVisitId(visitId ?? "");
+    if (!patient || !visit) {
+      return undefined;
+    }
 
-  if (!patient || !visit) {
+    return { patient, visit, prescription };
+  }, [patientId, visitId]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <p className="text-sm text-gray-500">Loading visit...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
     return (
       <div className="space-y-4">
         <button
@@ -32,16 +50,18 @@ function VisitDetails() {
 
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <h1 className="text-lg font-semibold text-red-800">
-            Visit not found
+            {error ? "Unable to load visit" : "Visit not found"}
           </h1>
 
           <p className="mt-1 text-sm text-red-600">
-            The visit record you're looking for does not exist.
+            {error ?? "The visit record you're looking for does not exist."}
           </p>
         </div>
       </div>
     );
   }
+
+  const { patient, visit, prescription } = data;
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString();
 

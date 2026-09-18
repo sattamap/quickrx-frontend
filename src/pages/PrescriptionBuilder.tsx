@@ -526,6 +526,7 @@ function PrescriptionBuilder() {
                   <option value="1+0+1">1+0+1</option>
                   <option value="0+1+1">0+1+1</option>
                   <option value="1+1+1">1+1+1</option>
+                  <option value="1+1+1+1">1+1+1+1</option>
                 </optgroup>
 
                 <optgroup label="Standard Frequency">

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { initialPatients } from "../data/patients";
-import { getPrescriptions } from "../utils/prescriptionStorage";
-import { getVisits } from "../utils/visitStorage";
+import { getPatients } from "../services/patientService";
+import { getVisits } from "../services/visitService";
+import { getPrescriptions } from "../services/prescriptionService";
+import { useAsyncData } from "../hooks/useAsyncData";
 
 type DateFilter = "all" | "today" | "7days" | "30days";
 
@@ -11,24 +12,30 @@ function Prescription() {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] =
-    useState<DateFilter>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 
-  const prescriptions = getPrescriptions();
-  const visits = getVisits();
+  const { data, isLoading, error } = useAsyncData(async () => {
+    const [prescriptions, patients, visits] = await Promise.all([
+      getPrescriptions(),
+      getPatients(),
+      getVisits(),
+    ]);
+
+    return { prescriptions, patients, visits };
+  }, []);
 
   const filteredPrescriptions = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
+    if (!data) return [];
 
+    const search = searchTerm.trim().toLowerCase();
     const today = new Date();
 
-    return prescriptions.filter((prescription) => {
+    return data.prescriptions.filter((prescription) => {
       /*
        * Search filter
        */
-      const patient = initialPatients.find(
-        (currentPatient) =>
-          currentPatient.id === prescription.patientId,
+      const patient = data.patients.find(
+        (currentPatient) => currentPatient.id === prescription.patientId,
       );
 
       const matchesSearch =
@@ -62,32 +69,24 @@ function Prescription() {
       );
 
       if (dateFilter === "today") {
-        return (
-          prescriptionDate.getTime() ===
-          todayDate.getTime()
-        );
+        return prescriptionDate.getTime() === todayDate.getTime();
       }
 
-      const daysAgo =
-        dateFilter === "7days" ? 7 : 30;
+      const daysAgo = dateFilter === "7days" ? 7 : 30;
 
       const startDate = new Date(todayDate);
 
-      startDate.setDate(
-        startDate.getDate() - (daysAgo - 1),
-      );
+      startDate.setDate(startDate.getDate() - (daysAgo - 1));
 
       return prescriptionDate >= startDate;
     });
-  }, [searchTerm, dateFilter, prescriptions]);
+  }, [searchTerm, dateFilter, data]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Prescriptions
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Prescriptions</h1>
 
         <p className="mt-1 text-sm text-gray-500">
           View and manage patient prescriptions.
@@ -110,9 +109,7 @@ function Prescription() {
               id="prescription-search"
               type="text"
               value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(event.target.value)
-              }
+              onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by patient name or patient ID..."
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
@@ -131,9 +128,7 @@ function Prescription() {
               id="prescription-date-filter"
               value={dateFilter}
               onChange={(event) =>
-                setDateFilter(
-                  event.target.value as DateFilter,
-                )
+                setDateFilter(event.target.value as DateFilter)
               }
               className="w-full min-w-[180px] rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
@@ -177,14 +172,25 @@ function Prescription() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            {filteredPrescriptions.length}{" "}
-            {filteredPrescriptions.length === 1
-              ? "prescription"
-              : "prescriptions"}
+            {isLoading
+              ? "Loading..."
+              : `${filteredPrescriptions.length} ${
+                  filteredPrescriptions.length === 1
+                    ? "prescription"
+                    : "prescriptions"
+                }`}
           </p>
         </div>
 
-        {filteredPrescriptions.length === 0 ? (
+        {isLoading ? (
+          <div className="px-5 py-12 text-center text-sm text-gray-500">
+            Loading prescriptions...
+          </div>
+        ) : error ? (
+          <div className="px-5 py-12 text-center text-sm text-red-600">
+            {error}
+          </div>
+        ) : filteredPrescriptions.length === 0 ? (
           <div className="px-5 py-12 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl">
               Rx
@@ -233,16 +239,13 @@ function Prescription() {
 
               <tbody>
                 {filteredPrescriptions.map((prescription) => {
-                  const patient = initialPatients.find(
+                  const patient = data?.patients.find(
                     (currentPatient) =>
-                      currentPatient.id ===
-                      prescription.patientId,
+                      currentPatient.id === prescription.patientId,
                   );
 
-                  const visit = visits.find(
-                    (currentVisit) =>
-                      currentVisit.id ===
-                      prescription.visitId,
+                  const visit = data?.visits.find(
+                    (currentVisit) => currentVisit.id === prescription.visitId,
                   );
 
                   return (
@@ -253,20 +256,15 @@ function Prescription() {
                       {/* Patient */}
                       <td className="px-5 py-4">
                         <p className="font-medium text-gray-900">
-                          {patient?.name ??
-                            "Unknown Patient"}
+                          {patient?.name ?? "Unknown Patient"}
                         </p>
 
                         <p className="mt-0.5 text-xs text-gray-500">
                           {patient?.gender
-                            ? patient.gender
-                                .charAt(0)
-                                .toUpperCase() +
+                            ? patient.gender.charAt(0).toUpperCase() +
                               patient.gender.slice(1)
                             : ""}
-                          {patient?.age
-                            ? ` • ${patient.age} years`
-                            : ""}
+                          {patient?.age ? ` • ${patient.age} years` : ""}
                         </p>
                       </td>
 

@@ -1,19 +1,18 @@
 import { useState } from "react";
-import type {
-  CreatePatientInput,
-  Patient,
-} from "../types/patient";
+import type { CreatePatientInput, Patient } from "../types/patient";
 
 interface PatientFormProps {
   initialData?: Patient;
   onSubmit: (data: CreatePatientInput) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
 function PatientForm({
   initialData,
   onSubmit,
   onCancel,
+  isSubmitting = false,
 }: PatientFormProps) {
   const [formData, setFormData] = useState<CreatePatientInput>({
     patientId: initialData?.patientId ?? "",
@@ -32,7 +31,7 @@ function PatientForm({
   const handleChange = (
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = event.target;
 
@@ -73,10 +72,7 @@ function PatientForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6"
-    >
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -264,16 +260,18 @@ function PatientForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          disabled={isSubmitting}
+          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Cancel
         </button>
 
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          disabled={isSubmitting}
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
-          Save Patient
+          {isSubmitting ? "Saving..." : "Save Patient"}
         </button>
       </div>
     </form>

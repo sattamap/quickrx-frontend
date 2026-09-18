@@ -10,7 +10,7 @@ function TopBar() {
       <div className="flex items-center gap-3">
         <div className="hidden text-right sm:block">
           <p className="text-sm font-medium text-gray-900">
-            Dr. Doctor
+            Dr. Romel
           </p>
 
           <p className="text-xs text-gray-500">

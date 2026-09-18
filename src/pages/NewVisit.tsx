@@ -1,64 +1,37 @@
-import type { Visit } from "../types/visit";
-import { saveVisit } from "../utils/visitStorage";
-import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { initialPatients } from "../data/patients";
+import { getPatientById } from "../services/patientService";
+import { createVisit } from "../services/visitService";
+import { useAsyncData } from "../hooks/useAsyncData";
+
+import type { CreateVisitInput } from "../types/visit";
+import type { Patient } from "../types/patient";
+
+/* ------------------------------------------------------------------ */
+/* Loader wrapper                                                      */
+/* ------------------------------------------------------------------ */
 
 function NewVisit() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === id,
+  const { data: patient, isLoading, error } = useAsyncData(
+    () => (id ? getPatientById(id) : Promise.resolve(undefined)),
+    [id],
   );
 
-  const [chiefComplaint, setChiefComplaint] = useState("");
-  const [diagnosis, setDiagnosis] = useState("");
-  const [clinicalNotes, setClinicalNotes] = useState("");
-  const [visualAcuity, setVisualAcuity] = useState({
-    right: {
-      unaided: "",
-      aided: "",
-    },
-    left: {
-      unaided: "",
-      aided: "",
-    },
-  });
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <p className="text-sm text-gray-500">Loading patient...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const [refraction, setRefraction] = useState({
-    right: {
-      sph: "",
-      cyl: "",
-      axis: "",
-      visualAcuity: "",
-    },
-    left: {
-      sph: "",
-      cyl: "",
-      axis: "",
-      visualAcuity: "",
-    },
-  });
-
-  const [iop, setIop] = useState({
-    right: "",
-    left: "",
-  });
-
-  const [eyeExamination, setEyeExamination] = useState({
-    anteriorSegment: {
-      right: "",
-      left: "",
-    },
-    fundus: {
-      right: "",
-      left: "",
-    },
-  });
-
-  if (!patient) {
+  if (error || !patient) {
     return (
       <div className="space-y-4">
         <button
@@ -70,78 +43,112 @@ function NewVisit() {
         </button>
 
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-          <h1 className="font-semibold text-red-800">Patient not found</h1>
+          <h1 className="font-semibold text-red-800">
+            {error ? "Unable to load patient" : "Patient not found"}
+          </h1>
 
           <p className="mt-1 text-sm text-red-600">
-            Unable to start a visit because this patient does not exist.
+            {error ??
+              "Unable to start a visit because this patient does not exist."}
           </p>
         </div>
       </div>
     );
   }
 
-const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
+  return <NewVisitForm patient={patient} />;
+}
 
-  if (!patient) return;
+/* ------------------------------------------------------------------ */
+/* Form                                                                */
+/* ------------------------------------------------------------------ */
 
-  const newVisit: Visit = {
-    id: crypto.randomUUID(),
+interface NewVisitFormProps {
+  patient: Patient;
+}
 
-    patientId: patient.id,
+function NewVisitForm({ patient }: NewVisitFormProps) {
+  const navigate = useNavigate();
 
-    ageAtVisit: patient.age,
+  const [isSaving, setIsSaving] = useState(false);
 
-    visitDate: new Date().toISOString(),
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [clinicalNotes, setClinicalNotes] = useState("");
+  const [visualAcuity, setVisualAcuity] = useState({
+    right: { unaided: "", aided: "" },
+    left: { unaided: "", aided: "" },
+  });
 
-    chiefComplaint: chiefComplaint.trim(),
+  const [refraction, setRefraction] = useState({
+    right: { sph: "", cyl: "", axis: "", visualAcuity: "" },
+    left: { sph: "", cyl: "", axis: "", visualAcuity: "" },
+  });
 
-    examination: {
-      visualAcuity: {
-        right: visualAcuity.right,
-        left: visualAcuity.left,
+  const [iop, setIop] = useState({ right: "", left: "" });
+
+  const [eyeExamination, setEyeExamination] = useState({
+    anteriorSegment: { right: "", left: "" },
+    fundus: { right: "", left: "" },
+  });
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setIsSaving(true);
+
+    const newVisit: CreateVisitInput = {
+      patientId: patient.id,
+      ageAtVisit: patient.age,
+      visitDate: new Date().toISOString(),
+      chiefComplaint: chiefComplaint.trim(),
+
+      examination: {
+        visualAcuity: {
+          right: visualAcuity.right,
+          left: visualAcuity.left,
+        },
+
+        refraction: {
+          right: refraction.right,
+          left: refraction.left,
+        },
+
+        iop: {
+          right: iop.right,
+          left: iop.left,
+        },
+
+        anteriorSegment: {
+          right: eyeExamination.anteriorSegment.right,
+          left: eyeExamination.anteriorSegment.left,
+        },
+
+        fundus: {
+          right: eyeExamination.fundus.right,
+          left: eyeExamination.fundus.left,
+        },
       },
 
-      refraction: {
-        right: refraction.right,
-        left: refraction.left,
-      },
+      diagnosis: diagnosis.trim(),
+      clinicalNotes: clinicalNotes.trim(),
+    };
 
-      iop: {
-        right: iop.right,
-        left: iop.left,
-      },
+    try {
+      const savedVisit = await createVisit(newVisit);
 
-      anteriorSegment: {
-        right: eyeExamination.anteriorSegment.right,
-        left: eyeExamination.anteriorSegment.left,
-      },
+      console.log("Visit saved successfully:", savedVisit);
 
-      fundus: {
-        right: eyeExamination.fundus.right,
-        left: eyeExamination.fundus.left,
-      },
-    },
+      navigate(`/patients/${patient.id}`);
+    } catch (submitError) {
+      console.error("Failed to save visit:", submitError);
 
-    diagnosis: diagnosis.trim(),
+      window.alert("Unable to save visit. Please try again.");
 
-    clinicalNotes: clinicalNotes.trim(),
-
-    createdAt: new Date().toISOString(),
+      setIsSaving(false);
+    }
   };
 
-  try {
-    saveVisit(newVisit);
-
-    console.log("Visit saved successfully:", newVisit);
-
-    navigate(`/patients/${patient.id}`);
-  } catch (error) {
-    console.error("Failed to save visit:", error);
-
-    window.alert("Unable to save visit. Please try again.");
-  }
-};
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
@@ -223,133 +230,200 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
           </div>
         </section>
 
-        {/* Examination Placeholder */}
+        {/* Ophthalmic Examination */}
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">
             Ophthalmic Examination
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Detailed eye examination fields will be added in the next steps.
+            Enter the eye examination findings for this visit.
           </p>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="min-w-0 rounded-lg border bg-white p-4">
-              <h3 className="mb-4 text-lg font-semibold text-gray-800">
-                Visual Acuity
-              </h3>
+          <div className="mt-5 space-y-5">
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* Visual Acuity */}
+              <div className="rounded-lg border border-gray-200 p-4">
+                <h3 className="mb-4 text-base font-semibold text-gray-800">
+                  Visual Acuity
+                </h3>
 
-              <div className="grid min-w-0 gap-6 md:grid-cols-2">
-                {/* Right Eye */}
-                <div>
-                  <h4 className="mb-3 font-medium text-gray-700">
-                    Right Eye (OD)
-                  </h4>
+                <div className="space-y-5">
+                  {/* Right Eye */}
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-gray-700">
+                      Right Eye (OD)
+                    </h4>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs text-center font-medium text-gray-700">
-                        Unaided VA
-                      </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">
+                          Unaided VA
+                        </label>
 
-                      <input
-                        type="text"
-                        value={visualAcuity.right.unaided}
-                        onChange={(event) =>
-                          setVisualAcuity((previous) => ({
-                            ...previous,
-                            right: {
-                              ...previous.right,
-                              unaided: event.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="e.g. 6/18"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-                      />
+                        <input
+                          type="text"
+                          value={visualAcuity.right.unaided}
+                          onChange={(event) =>
+                            setVisualAcuity((previous) => ({
+                              ...previous,
+                              right: {
+                                ...previous.right,
+                                unaided: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="e.g. 6/18"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">
+                          Aided VA
+                        </label>
+
+                        <input
+                          type="text"
+                          value={visualAcuity.right.aided}
+                          onChange={(event) =>
+                            setVisualAcuity((previous) => ({
+                              ...previous,
+                              right: {
+                                ...previous.right,
+                                aided: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="e.g. 6/6"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="mb-1 block text-xs text-center font-medium text-gray-700">
-                        Aided VA
-                      </label>
+                  {/* Left Eye */}
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-gray-700">
+                      Left Eye (OS)
+                    </h4>
 
-                      <input
-                        type="text"
-                        value={visualAcuity.right.aided}
-                        onChange={(event) =>
-                          setVisualAcuity((previous) => ({
-                            ...previous,
-                            right: {
-                              ...previous.right,
-                              aided: event.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="e.g. 6/6"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-                      />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">
+                          Unaided VA
+                        </label>
+
+                        <input
+                          type="text"
+                          value={visualAcuity.left.unaided}
+                          onChange={(event) =>
+                            setVisualAcuity((previous) => ({
+                              ...previous,
+                              left: {
+                                ...previous.left,
+                                unaided: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="e.g. 6/12"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-600">
+                          Aided VA
+                        </label>
+
+                        <input
+                          type="text"
+                          value={visualAcuity.left.aided}
+                          onChange={(event) =>
+                            setVisualAcuity((previous) => ({
+                              ...previous,
+                              left: {
+                                ...previous.left,
+                                aided: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="e.g. 6/6"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Left Eye */}
-                <div>
-                  <h4 className="mb-3 font-medium text-gray-700">
-                    Left Eye (OS)
-                  </h4>
+              {/* Intraocular Pressure */}
+              <div className="rounded-lg border border-gray-200 p-4">
+                <h3 className="mb-4 text-base font-semibold text-gray-800">
+                  Intraocular Pressure (IOP)
+                </h3>
 
-                  <div className="grid min-w-0 gap-6 md:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs text-center font-medium text-gray-700">
-                        Unaided VA
-                      </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Right Eye */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Right Eye (OD)
+                    </label>
 
+                    <div className="flex items-center gap-2">
                       <input
-                        type="text"
-                        value={visualAcuity.left.unaided}
+                        type="number"
+                        min="0"
+                        value={iop.right}
                         onChange={(event) =>
-                          setVisualAcuity((previous) => ({
+                          setIop((previous) => ({
                             ...previous,
-                            left: {
-                              ...previous.left,
-                              unaided: event.target.value,
-                            },
+                            right: event.target.value,
                           }))
                         }
-                        placeholder="e.g. 6/12"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        placeholder="15"
+                        className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
+
+                      <span className="shrink-0 text-sm text-gray-500">
+                        mmHg
+                      </span>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="mb-1 block text-xs text-center font-medium text-gray-700">
-                        Aided VA
-                      </label>
+                  {/* Left Eye */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Left Eye (OS)
+                    </label>
 
+                    <div className="flex items-center gap-2">
                       <input
-                        type="text"
-                        value={visualAcuity.left.aided}
+                        type="number"
+                        min="0"
+                        value={iop.left}
                         onChange={(event) =>
-                          setVisualAcuity((previous) => ({
+                          setIop((previous) => ({
                             ...previous,
-                            left: {
-                              ...previous.left,
-                              aided: event.target.value,
-                            },
+                            left: event.target.value,
                           }))
                         }
-                        placeholder="e.g. 6/6"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        placeholder="16"
+                        className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
+
+                      <span className="shrink-0 text-sm text-gray-500">
+                        mmHg
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="min-w-0 rounded-lg border bg-white p-4">
-              <h3 className="mb-4 text-lg font-semibold text-gray-800">
+            {/* Refraction — full width, needs room for the table */}
+            <div className="rounded-lg border border-gray-200 p-4">
+              <h3 className="mb-4 text-base font-semibold text-gray-800">
                 Refraction
               </h3>
 
@@ -384,7 +458,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="-1.50"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -402,7 +476,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="-0.50"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -420,7 +494,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="180"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[80px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -438,7 +512,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="6/6"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
                     </tr>
@@ -461,7 +535,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="-1.25"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -479,7 +553,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="-0.25"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -497,7 +571,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="170"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[80px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
 
@@ -515,7 +589,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                             }))
                           }
                           placeholder="6/6"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                          className="w-full min-w-[90px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                       </td>
                     </tr>
@@ -524,65 +598,9 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
               </div>
             </div>
 
-            <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-4 text-lg font-semibold text-gray-800">
-                Intraocular Pressure (IOP)
-              </h3>
-
-              <div className="grid gap-6 sm:grid-cols-2">
-                {/* Right Eye */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Right Eye (OD)
-                  </label>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={iop.right}
-                      onChange={(event) =>
-                        setIop((previous) => ({
-                          ...previous,
-                          right: event.target.value,
-                        }))
-                      }
-                      placeholder="15"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-                    />
-
-                    <span className="text-sm text-gray-500">mmHg</span>
-                  </div>
-                </div>
-
-                {/* Left Eye */}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Left Eye (OS)
-                  </label>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      value={iop.left}
-                      onChange={(event) =>
-                        setIop((previous) => ({
-                          ...previous,
-                          left: event.target.value,
-                        }))
-                      }
-                      placeholder="16"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-                    />
-
-                    <span className="text-sm text-gray-500">mmHg</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="min-w-0 rounded-lg border bg-white p-4">
-              <h3 className="mb-1 text-lg font-semibold text-gray-800">
+            {/* Eye Examination — full width, needs room for textareas */}
+            <div className="rounded-lg border border-gray-200 p-4">
+              <h3 className="mb-1 text-base font-semibold text-gray-800">
                 Eye Examination
               </h3>
 
@@ -592,13 +610,13 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
 
               {/* Anterior Segment */}
               <div className="mb-6">
-                <h4 className="mb-3 font-medium text-gray-700">
+                <h4 className="mb-3 text-sm font-medium text-gray-700">
                   Anterior Segment
                 </h4>
 
-                <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   {/* Right Eye */}
-                  <div className="min-w-0">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Right Eye (OD)
                     </label>
@@ -616,12 +634,12 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                         }))
                       }
                       placeholder="Enter anterior segment findings..."
-                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
 
                   {/* Left Eye */}
-                  <div className="min-w-0">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Left Eye (OS)
                     </label>
@@ -639,7 +657,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                         }))
                       }
                       placeholder="Enter anterior segment findings..."
-                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                 </div>
@@ -647,11 +665,13 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
 
               {/* Fundus */}
               <div>
-                <h4 className="mb-3 font-medium text-gray-700">Fundus</h4>
+                <h4 className="mb-3 text-sm font-medium text-gray-700">
+                  Fundus
+                </h4>
 
-                <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   {/* Right Eye */}
-                  <div className="min-w-0">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Right Eye (OD)
                     </label>
@@ -669,12 +689,12 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                         }))
                       }
                       placeholder="Enter fundus findings..."
-                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
 
                   {/* Left Eye */}
-                  <div className="min-w-0">
+                  <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Left Eye (OS)
                     </label>
@@ -692,7 +712,7 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
                         }))
                       }
                       placeholder="Enter fundus findings..."
-                      className="w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                 </div>
@@ -744,16 +764,18 @@ const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
           <button
             type="button"
             onClick={() => navigate(`/patients/${patient.id}`)}
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            disabled={isSaving}
+            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+            disabled={isSaving}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
           >
-            Save Visit
+            {isSaving ? "Saving..." : "Save Visit"}
           </button>
         </div>
       </form>
