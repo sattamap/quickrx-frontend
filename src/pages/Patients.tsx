@@ -1,74 +1,107 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import PatientForm from "../components/PatientForm";
+import type {
+  CreatePatientInput,
+  Patient,
+} from "../types/patient";
 import {
   createPatient,
   deletePatient,
   getPatients,
   updatePatient,
-} from "../services/Patientservice";
-import { useAsyncData } from "../hooks/useAsyncData";
-import PatientForm from "../components/PatientForm";
-
-import type { CreatePatientInput, Patient } from "../types/patient";
+} from "../services/patientApi";
 
 function Patients() {
   const navigate = useNavigate();
 
-  const {
-    data: patients,
-    isLoading,
-    error,
-    reload,
-  } = useAsyncData(getPatients, []);
-
-  const [search, setSearch] = useState("");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filteredPatients = (patients ?? []).filter((patient) => {
-    const searchTerm = search.toLowerCase();
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const data = await getPatients();
+        setPatients(data);
+      } catch (error) {
+        console.error("Failed to load patients:", error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load patients.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPatients();
+  }, []);
+
+  const filteredPatients = patients.filter((patient) => {
+    const search = searchTerm.toLowerCase();
 
     return (
-      patient.name.toLowerCase().includes(searchTerm) ||
-      patient.patientId.toLowerCase().includes(searchTerm) ||
-      patient.phone.includes(searchTerm)
+      patient.name.toLowerCase().includes(search) ||
+      patient.patientId.toLowerCase().includes(search) ||
+      patient.phone.toLowerCase().includes(search)
     );
   });
 
-  const handleOpenAddModal = () => {
-    setEditingPatient(null);
+  const handleAddPatient = () => {
+    setEditingPatient(undefined);
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (patient: Patient) => {
+  const handleEditPatient = (patient: Patient) => {
     setEditingPatient(patient);
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingPatient(null);
-  };
-
   const handleSubmit = async (data: CreatePatientInput) => {
-    setIsSubmitting(true);
-
     try {
+      setError("");
+
       if (editingPatient) {
-        await updatePatient({ ...editingPatient, ...data });
+        const updatedPatient = await updatePatient(
+          editingPatient.id,
+          data,
+        );
+
+        setPatients((currentPatients) =>
+          currentPatients.map((patient) =>
+            patient.id === updatedPatient.id
+              ? updatedPatient
+              : patient,
+          ),
+        );
       } else {
-        await createPatient(data);
+        const newPatient = await createPatient(data);
+
+        setPatients((currentPatients) => [
+          newPatient,
+          ...currentPatients,
+        ]);
       }
 
-      reload();
-      handleCloseModal();
-    } catch (submitError) {
-      console.error("Failed to save patient:", submitError);
-      window.alert("Unable to save patient. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      setIsModalOpen(false);
+      setEditingPatient(undefined);
+    } catch (error) {
+      console.error("Failed to save patient:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save patient.",
+      );
     }
   };
 
@@ -82,203 +115,173 @@ function Patients() {
     }
 
     try {
+      setError("");
+
       await deletePatient(patient.id);
-      reload();
-    } catch (deleteError) {
-      console.error("Failed to delete patient:", deleteError);
-      window.alert("Unable to delete patient. Please try again.");
+
+      setPatients((currentPatients) =>
+        currentPatients.filter(
+          (currentPatient) => currentPatient.id !== patient.id,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to delete patient:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete patient.",
+      );
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Patients</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Patients
+          </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Manage your patients and their medical records.
+            Manage your patient records.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handleOpenAddModal}
+          onClick={handleAddPatient}
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
         >
           + Add Patient
         </button>
       </div>
 
-      {/* Search */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <input
           type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by patient name, ID or phone..."
+          placeholder="Search by name, patient ID, or phone..."
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
       </div>
 
-      {/* Patient Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="font-semibold text-gray-900">Patient List</h2>
-
-          <p className="mt-1 text-xs text-gray-500">
-            {isLoading
-              ? "Loading..."
-              : `${filteredPatients.length} patient${
-                  filteredPatients.length !== 1 ? "s" : ""
-                } found`}
-          </p>
-        </div>
-
         {isLoading ? (
-          <div className="px-5 py-10 text-center text-sm text-gray-500">
+          <div className="p-8 text-center text-sm text-gray-500">
             Loading patients...
           </div>
-        ) : error ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-sm text-red-600">{error}</p>
-
-            <button
-              type="button"
-              onClick={reload}
-              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              Try again
-            </button>
+        ) : filteredPatients.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-500">
+            No patients found.
           </div>
         ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Patient ID</th>
-                    <th className="px-5 py-3 font-medium">Patient</th>
-                    <th className="px-5 py-3 font-medium">Age</th>
-                    <th className="px-5 py-3 font-medium">Gender</th>
-                    <th className="px-5 py-3 font-medium">Phone</th>
-                    <th className="px-5 py-3 font-medium">Actions</th>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Patient ID
+                  </th>
+
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Name
+                  </th>
+
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Age
+                  </th>
+
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Gender
+                  </th>
+
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Phone
+                  </th>
+
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredPatients.map((patient) => (
+                  <tr key={patient.id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-blue-600">
+                      {patient.patientId}
+                    </td>
+
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                      {patient.name}
+                    </td>
+
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                      {patient.age}
+                    </td>
+
+                    <td className="whitespace-nowrap px-6 py-4 text-sm capitalize text-gray-600">
+                      {patient.gender}
+                    </td>
+
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                      {patient.phone}
+                    </td>
+
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/patients/${patient.id}`)
+                          }
+                          className="rounded-md px-3 py-1.5 text-blue-600 hover:bg-blue-50"
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleEditPatient(patient)}
+                          className="rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-100"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePatient(patient)}
+                          className="rounded-md px-3 py-1.5 text-red-600 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-
-                <tbody className="divide-y divide-gray-100">
-                  {filteredPatients.map((patient) => (
-                    <tr key={patient.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-4 font-medium text-gray-700">
-                        {patient.patientId}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-gray-900">
-                          {patient.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-gray-500">
-                          {patient.address}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-4 text-gray-600">
-                        {patient.age}
-                      </td>
-
-                      <td className="px-5 py-4 capitalize text-gray-600">
-                        {patient.gender}
-                      </td>
-
-                      <td className="px-5 py-4 text-gray-600">
-                        {patient.phone}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/patients/${patient.id}`)}
-                            className="font-medium text-blue-600 hover:text-blue-700"
-                          >
-                            View
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(patient)}
-                            className="font-medium text-gray-600 hover:text-gray-900"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePatient(patient)}
-                            className="font-medium text-red-600 hover:text-red-700"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {filteredPatients.length === 0 && (
-              <div className="px-5 py-10 text-center">
-                <p className="font-medium text-gray-900">No patients found</p>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Try a different search term.
-                </p>
-              </div>
-            )}
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {editingPatient ? "Edit Patient" : "Add New Patient"}
-                </h2>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {editingPatient
-                    ? "Update patient information."
-                    : "Create a new patient record."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="text-2xl leading-none text-gray-400 hover:text-gray-600"
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-5">
-              <PatientForm
-                initialData={editingPatient ?? undefined}
-                onSubmit={handleSubmit}
-                onCancel={handleCloseModal}
-                isSubmitting={isSubmitting}
-              />
-            </div>
-          </div>
-        </div>
+        <PatientForm
+          initialData={editingPatient}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setIsModalOpen(false);
+            setEditingPatient(undefined);
+          }}
+        />
       )}
     </div>
   );

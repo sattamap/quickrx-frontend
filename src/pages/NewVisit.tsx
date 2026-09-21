@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getPatientById } from "../services/patientService";
-import { createVisit } from "../services/visitService";
+import { getPatientById } from "../services/patientApi.ts";
+import { createVisit } from "../services/visitApi.ts";
 import { useAsyncData } from "../hooks/useAsyncData";
 
-import type { CreateVisitInput } from "../types/visit";
-import type { Patient } from "../types/patient";
+import type { CreateVisitInput } from "../types/visit.ts";
+import type { Patient } from "../types/patient.ts";
 
 /* ------------------------------------------------------------------ */
 /* Loader wrapper                                                      */

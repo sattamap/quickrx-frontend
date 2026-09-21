@@ -1,9 +1,9 @@
 import type { CreateVisitInput, Visit } from "../types/visit";
 import { getVisits as getStoredVisits, saveVisit } from "../utils/visitStorage";
-import { delay } from "./api";
+//import { delay } from "./patientApi";
 
 export async function getVisits(): Promise<Visit[]> {
-  await delay();
+  //await delay();
 
   // Later: return request<Visit[]>("/visits");
   return getStoredVisits();
@@ -12,7 +12,7 @@ export async function getVisits(): Promise<Visit[]> {
 export async function getVisitsByPatientId(
   patientId: string,
 ): Promise<Visit[]> {
-  await delay();
+ // await delay();
 
   // Later: return request<Visit[]>(`/patients/${patientId}/visits`);
   return getStoredVisits()
@@ -24,7 +24,7 @@ export async function getVisitsByPatientId(
 }
 
 export async function getVisitById(id: string): Promise<Visit | undefined> {
-  await delay();
+ // await delay();
 
   // Later: return request<Visit>(`/visits/${id}`);
   return getStoredVisits().find((visit) => visit.id === id);
@@ -39,7 +39,7 @@ export async function getVisitForPatient(
   patientId: string,
   visitId: string,
 ): Promise<Visit | undefined> {
-  await delay();
+ // await delay();
 
   return getStoredVisits().find(
     (visit) => visit.id === visitId && visit.patientId === patientId,
@@ -47,7 +47,7 @@ export async function getVisitForPatient(
 }
 
 export async function createVisit(input: CreateVisitInput): Promise<Visit> {
-  await delay();
+ // await delay();
 
   const newVisit: Visit = {
     ...input,

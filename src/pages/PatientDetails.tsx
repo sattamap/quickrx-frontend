@@ -1,17 +1,74 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { initialPatients } from "../data/patients";
-import { getVisits } from "../utils/visitStorage";
+import { getPatientById } from "../services/patientApi.ts";
+import { getVisitsByPatientId } from "../services/visitApi.ts";
+import type { Patient } from "../types/patient.ts";
+import type { Visit } from "../types/visit.ts";
 
 function PatientDetails() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const patient = initialPatients.find(
-    (currentPatient) => currentPatient.id === id,
-  );
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!patient) {
+  useEffect(() => {
+    const loadPatientDetails = async () => {
+      if (!id) {
+        setError("Patient ID is missing.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const [patientData, visitData] = await Promise.all([
+          getPatientById(id),
+          getVisitsByPatientId(id),
+        ]);
+
+        setPatient(patientData);
+        setVisits(visitData);
+      } catch (error) {
+        console.error("Failed to load patient details:", error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load patient details.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPatientDetails();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => navigate("/patients")}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          ← Back to Patients
+        </button>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm text-gray-500">Loading patient...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !patient) {
     return (
       <div className="space-y-4">
         <button
@@ -24,23 +81,17 @@ function PatientDetails() {
 
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <h1 className="text-lg font-semibold text-red-800">
-            Patient not found
+            {error ? "Unable to load patient" : "Patient not found"}
           </h1>
 
           <p className="mt-1 text-sm text-red-600">
-            The patient record you're looking for does not exist.
+            {error ||
+              "The patient record you're looking for does not exist."}
           </p>
         </div>
       </div>
     );
   }
-
-  const visits = getVisits()
-    .filter((visit) => visit.patientId === patient.id)
-    .sort(
-      (a, b) =>
-        new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime(),
-    );
 
   return (
     <div className="space-y-6">
@@ -111,9 +162,13 @@ function PatientDetails() {
             </div>
 
             <div>
-              <p className="text-xs font-medium uppercase text-gray-500">Age</p>
+              <p className="text-xs font-medium uppercase text-gray-500">
+                Age
+              </p>
 
-              <p className="mt-1 text-sm text-gray-700">{patient.age} years</p>
+              <p className="mt-1 text-sm text-gray-700">
+                {patient.age} years
+              </p>
             </div>
 
             <div>
@@ -141,7 +196,9 @@ function PatientDetails() {
                 Phone
               </p>
 
-              <p className="mt-1 text-sm text-gray-700">{patient.phone}</p>
+              <p className="mt-1 text-sm text-gray-700">
+                {patient.phone}
+              </p>
             </div>
 
             <div className="sm:col-span-2">
@@ -203,9 +260,13 @@ function PatientDetails() {
                 <tr>
                   <th className="px-5 py-3 font-medium">Date</th>
 
-                  <th className="px-5 py-3 font-medium">Reason for Visit</th>
+                  <th className="px-5 py-3 font-medium">
+                    Reason for Visit
+                  </th>
 
-                  <th className="px-5 py-3 font-medium">Diagnosis</th>
+                  <th className="px-5 py-3 font-medium">
+                    Diagnosis
+                  </th>
 
                   <th className="px-5 py-3 font-medium">Age</th>
 
@@ -239,7 +300,9 @@ function PatientDetails() {
                       <button
                         type="button"
                         onClick={() =>
-                          navigate(`/patients/${patient.id}/visits/${visit.id}`)
+                          navigate(
+                            `/patients/${patient.id}/visits/${visit.id}`,
+                          )
                         }
                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
                       >
@@ -256,12 +319,15 @@ function PatientDetails() {
             <p className="font-medium text-gray-900">No visits yet</p>
 
             <p className="mt-1 text-sm text-gray-500">
-              Start a new visit to create the patient's first clinical record.
+              Start a new visit to create the patient's first
+              clinical record.
             </p>
 
             <button
               type="button"
-              onClick={() => navigate(`/patients/${patient.id}/new-visit`)}
+              onClick={() =>
+                navigate(`/patients/${patient.id}/new-visit`)
+              }
               className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Start New Visit

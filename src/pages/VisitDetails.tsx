@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getPatientById } from "../services/patientService";
-import { getVisitForPatient } from "../services/visitService";
-import { getPrescriptionByVisitId } from "../services/prescriptionService";
+import { getPatientById } from "../services/patientApi.ts";
+import { getVisitById } from "../services/visitApi.ts";
+import { getPrescriptionByVisitId } from "../services/prescriptionService.ts";
 import { useAsyncData } from "../hooks/useAsyncData";
 
 function VisitDetails() {
@@ -16,7 +16,7 @@ function VisitDetails() {
 
     const [patient, visit, prescription] = await Promise.all([
       getPatientById(patientId),
-      getVisitForPatient(patientId, visitId),
+      getVisitById(visitId),
       getPrescriptionByVisitId(visitId),
     ]);
 
@@ -79,7 +79,9 @@ function VisitDetails() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Visit Details</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Visit Details
+            </h1>
 
             <p className="mt-1 text-sm text-gray-500">
               {patient.name} · {patient.patientId}
@@ -400,7 +402,9 @@ function VisitDetails() {
 
       {/* Clinical Notes */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Clinical Notes</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          Clinical Notes
+        </h2>
 
         <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">
           {visit.clinicalNotes || "No clinical notes recorded"}

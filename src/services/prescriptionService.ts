@@ -8,10 +8,10 @@ import {
   savePrescription,
   updatePrescription as updateStoredPrescription,
 } from "../utils/prescriptionStorage";
-import { delay } from "./api";
+//import { delay } from "./patientApi";
 
 export async function getPrescriptions(): Promise<Prescription[]> {
-  await delay();
+  //await delay();
 
   // Later: return request<Prescription[]>("/prescriptions");
   return getStoredPrescriptions();
@@ -20,7 +20,7 @@ export async function getPrescriptions(): Promise<Prescription[]> {
 export async function getPrescriptionByVisitId(
   visitId: string,
 ): Promise<Prescription | undefined> {
-  await delay();
+  //await delay();
 
   // Later: return request<Prescription>(`/visits/${visitId}/prescription`);
   return getStoredPrescriptionByVisitId(visitId);
@@ -29,7 +29,7 @@ export async function getPrescriptionByVisitId(
 export async function createPrescription(
   input: CreatePrescriptionInput,
 ): Promise<Prescription> {
-  await delay();
+ // await delay();
 
   const newPrescription: Prescription = {
     ...input,
@@ -49,7 +49,7 @@ export async function createPrescription(
 export async function updatePrescription(
   prescription: Prescription,
 ): Promise<Prescription> {
-  await delay();
+ // await delay();
 
   updateStoredPrescription(prescription);
 

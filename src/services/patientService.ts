@@ -1,6 +1,6 @@
 import type { CreatePatientInput, Patient } from "../types/patient";
 import { getStoredPatients, setStoredPatients } from "../utils/patientStorage";
-import { delay } from "./api";
+//import { delay } from "./patientApi";
 
 /*
  * Generates the next PAT-xxx code from the highest existing number,
@@ -21,7 +21,7 @@ function generatePatientCode(patients: Patient[]): string {
 }
 
 export async function getPatients(): Promise<Patient[]> {
-  await delay();
+  //await delay();
 
   // Later: return request<Patient[]>("/patients");
   return getStoredPatients();
@@ -30,7 +30,7 @@ export async function getPatients(): Promise<Patient[]> {
 export async function getPatientById(
   id: string,
 ): Promise<Patient | undefined> {
-  await delay();
+  //await delay();
 
   // Later: return request<Patient>(`/patients/${id}`);
   return getStoredPatients().find((patient) => patient.id === id);
@@ -39,7 +39,7 @@ export async function getPatientById(
 export async function createPatient(
   input: CreatePatientInput,
 ): Promise<Patient> {
-  await delay();
+ // await delay();
 
   const patients = getStoredPatients();
 
@@ -60,7 +60,7 @@ export async function createPatient(
 }
 
 export async function updatePatient(patient: Patient): Promise<Patient> {
-  await delay();
+  //await delay();
 
   const patients = getStoredPatients();
 
@@ -78,7 +78,7 @@ export async function updatePatient(patient: Patient): Promise<Patient> {
 }
 
 export async function deletePatient(id: string): Promise<void> {
-  await delay();
+  //await delay();
 
   const patients = getStoredPatients();
 
