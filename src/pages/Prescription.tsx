@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getPatients } from "../services/patientService";
-import { getVisits } from "../services/visitService";
-import { getPrescriptions } from "../services/prescriptionService";
+import { getPatients } from "../services/patientApi";
+import { getVisits } from "../services/visitApi";
+import { getPrescriptions } from "../services/prescriptionApi";
 import { useAsyncData } from "../hooks/useAsyncData";
 
 type DateFilter = "all" | "today" | "7days" | "30days";
@@ -31,9 +31,7 @@ function Prescription() {
     const today = new Date();
 
     return data.prescriptions.filter((prescription) => {
-      /*
-       * Search filter
-       */
+      // Search filter
       const patient = data.patients.find(
         (currentPatient) => currentPatient.id === prescription.patientId,
       );
@@ -47,9 +45,7 @@ function Prescription() {
         return false;
       }
 
-      /*
-       * Date filter
-       */
+      // Date filter
       if (dateFilter === "all") {
         return true;
       }
@@ -75,7 +71,6 @@ function Prescription() {
       const daysAgo = dateFilter === "7days" ? 7 : 30;
 
       const startDate = new Date(todayDate);
-
       startDate.setDate(startDate.getDate() - (daysAgo - 1));
 
       return prescriptionDate >= startDate;
@@ -86,7 +81,9 @@ function Prescription() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Prescriptions</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Prescriptions
+        </h1>
 
         <p className="mt-1 text-sm text-gray-500">
           View and manage patient prescriptions.
@@ -245,7 +242,8 @@ function Prescription() {
                   );
 
                   const visit = data?.visits.find(
-                    (currentVisit) => currentVisit.id === prescription.visitId,
+                    (currentVisit) =>
+                      currentVisit.id === prescription.visitId,
                   );
 
                   return (
