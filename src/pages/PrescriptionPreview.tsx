@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getPatientById } from "../services/patientApi.ts";
 import { getVisitById } from "../services/visitApi.ts";
 import { getPrescriptionByVisitId } from "../services/prescriptionApi.ts";
+import { getDoctorProfile } from "../services/doctorProfileApi.ts";
+
 import { useAsyncData } from "../hooks/useAsyncData";
 
 function PrescriptionPreview() {
@@ -18,11 +20,12 @@ function PrescriptionPreview() {
       return undefined;
     }
 
-    const [patient, visit, prescription] =
+    const [patient, visit, prescription, doctorProfile] =
       await Promise.all([
         getPatientById(patientId),
         getVisitById(visitId),
         getPrescriptionByVisitId(visitId),
+        getDoctorProfile(),
       ]);
 
     if (visit.patientId !== patient.id) {
@@ -39,6 +42,7 @@ function PrescriptionPreview() {
       patient,
       visit,
       prescription,
+      doctorProfile,
     };
   }, [patientId, visitId]);
 
@@ -87,7 +91,12 @@ function PrescriptionPreview() {
     );
   }
 
-  const { patient, visit, prescription } = data;
+  const {
+    patient,
+    visit,
+    prescription,
+    doctorProfile,
+  } = data;
 
   const hasSpectacleData =
     prescription.spectaclePrescription.right.sph ||
@@ -156,31 +165,52 @@ function PrescriptionPreview() {
         <div className="flex items-start justify-between gap-4 border-b-2 border-gray-800 pb-3">
           <div>
             <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
-              Dr. Romel Chakma
+              {doctorProfile?.doctorName || "Doctor Name"}
             </h1>
 
-            <p className="mt-0.5 text-xs font-semibold text-gray-700 sm:text-sm">
-              Eye Specialist &amp; Surgeon
-            </p>
+            {doctorProfile?.specialty && (
+              <p className="mt-0.5 text-xs font-semibold text-gray-700 sm:text-sm">
+                {doctorProfile.specialty}
+              </p>
+            )}
 
-            <p className="mt-0.5 text-[11px] text-gray-600 sm:text-xs">
-              MBBS, MS (Ophthalmology), BCS (Health)
-            </p>
+            {doctorProfile?.qualification && (
+              <p className="mt-0.5 text-[11px] text-gray-600 sm:text-xs">
+                {doctorProfile.qualification}
+              </p>
+            )}
 
-            <p className="text-[11px] text-gray-600 sm:text-xs">
-              Trained in Cataract Microsurgery — National Institute
-              of Ophthalmology (NIO)
-            </p>
+            {doctorProfile?.registrationNumber && (
+              <p className="text-[11px] text-gray-600 sm:text-xs">
+                Reg. No: {doctorProfile.registrationNumber}
+              </p>
+            )}
+
+            {doctorProfile?.phone && (
+              <p className="text-[11px] text-gray-600 sm:text-xs">
+                Phone: {doctorProfile.phone}
+              </p>
+            )}
           </div>
 
           <div className="shrink-0 text-right">
-            <p className="text-sm font-bold text-gray-900">
-              QuickRx Eye Care
-            </p>
+            {doctorProfile?.clinicName && (
+              <p className="text-sm font-bold text-gray-900">
+                {doctorProfile.clinicName}
+              </p>
+            )}
 
-            <p className="text-[11px] text-gray-500">
-              Ophthalmology Clinic
-            </p>
+            {doctorProfile?.clinicAddress && (
+              <p className="max-w-56 text-[11px] text-gray-500">
+                {doctorProfile.clinicAddress}
+              </p>
+            )}
+
+            {doctorProfile?.email && (
+              <p className="text-[11px] text-gray-500">
+                {doctorProfile.email}
+              </p>
+            )}
           </div>
         </div>
 
@@ -342,8 +372,7 @@ function PrescriptionPreview() {
                     <span className="text-gray-500">
                       PD:
                     </span>{" "}
-                    {prescription.spectaclePrescription
-                      .pd
+                    {prescription.spectaclePrescription.pd
                       ? `${prescription.spectaclePrescription.pd} mm`
                       : "—"}
                   </p>
@@ -460,12 +489,20 @@ function PrescriptionPreview() {
             <div className="mb-1 h-8 border-b border-gray-400" />
 
             <p className="text-xs font-semibold text-gray-900 sm:text-sm">
-              Dr. Romel Chakma
+              {doctorProfile?.doctorName || "Doctor Name"}
             </p>
 
-            <p className="text-[11px] text-gray-500">
-              Eye Specialist &amp; Surgeon
-            </p>
+            {doctorProfile?.specialty && (
+              <p className="text-[11px] text-gray-500">
+                {doctorProfile.qualification}
+              </p>
+            )}
+
+            {doctorProfile?.registrationNumber && (
+              <p className="text-[10px] text-gray-500">
+                Reg. No: {doctorProfile.registrationNumber}
+              </p>
+            )}
           </div>
         </div>
       </div>

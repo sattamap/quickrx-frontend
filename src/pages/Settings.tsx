@@ -1,19 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState} from "react";
 
-interface DoctorProfile {
-  doctorName: string;
-  qualification: string;
-  specialty: string;
-  registrationNumber: string;
-  phone: string;
-  email: string;
-  clinicName: string;
-  clinicAddress: string;
-}
+import {
+  getDoctorProfile,
+  updateDoctorProfile,
+} from "../services/doctorProfileApi";
 
-const initialProfile: DoctorProfile = {
-  doctorName: "Dr. Romel",
-  qualification: "MBBS",
+import type { DoctorProfile } from "../types/doctorProfile";
+
+const emptyProfile: DoctorProfile = {
+  doctorName: "",
+  qualification: "",
   specialty: "Ophthalmology",
   registrationNumber: "",
   phone: "",
@@ -23,8 +19,41 @@ const initialProfile: DoctorProfile = {
 };
 
 function Settings() {
-  const [profile, setProfile] = useState<DoctorProfile>(initialProfile);
-  const [saved, setSaved] = useState(false);
+  const [profile, setProfile] =
+    useState<DoctorProfile>(emptyProfile);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const savedProfile = await getDoctorProfile();
+
+        if (savedProfile) {
+          setProfile(savedProfile);
+        }
+      } catch (error) {
+        console.error("Failed to load doctor profile:", error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load doctor profile.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadProfile();
+  }, []);
 
   const handleChange = (
     field: keyof DoctorProfile,
@@ -35,18 +64,78 @@ function Settings() {
       [field]: value,
     }));
 
-    setSaved(false);
+    setSuccessMessage("");
+    setError("");
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: React.SubmitEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
-    // Temporary:
-    // We will connect this to the backend later.
-    console.log("Doctor profile:", profile);
+    if (!profile.doctorName.trim()) {
+      setError("Doctor name is required.");
+      setSuccessMessage("");
+      return;
+    }
 
-    setSaved(true);
+    try {
+      setIsSaving(true);
+      setError("");
+      setSuccessMessage("");
+
+      const savedProfile = await updateDoctorProfile({
+        ...profile,
+        doctorName: profile.doctorName.trim(),
+        qualification: profile.qualification.trim(),
+        specialty: profile.specialty.trim(),
+        registrationNumber:
+          profile.registrationNumber.trim(),
+        phone: profile.phone.trim(),
+        email: profile.email.trim(),
+        clinicName: profile.clinicName.trim(),
+        clinicAddress: profile.clinicAddress.trim(),
+      });
+
+      setProfile(savedProfile);
+
+      setSuccessMessage(
+        "Doctor profile saved successfully.",
+      );
+    } catch (error) {
+      console.error("Failed to save doctor profile:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save doctor profile.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Settings
+          </h1>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your doctor and clinic information.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-gray-500">
+            Loading settings...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -61,6 +150,15 @@ function Settings() {
         </p>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm font-medium text-red-700">
+            {error}
+          </p>
+        </div>
+      )}
+
       {/* Doctor Profile */}
       <form
         onSubmit={handleSubmit}
@@ -72,7 +170,8 @@ function Settings() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            This information can be used on patient prescriptions.
+            This information will be used on patient
+            prescriptions.
           </p>
         </div>
 
@@ -91,7 +190,10 @@ function Settings() {
               type="text"
               value={profile.doctorName}
               onChange={(event) =>
-                handleChange("doctorName", event.target.value)
+                handleChange(
+                  "doctorName",
+                  event.target.value,
+                )
               }
               placeholder="Dr. Your Name"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -113,7 +215,10 @@ function Settings() {
                 type="text"
                 value={profile.qualification}
                 onChange={(event) =>
-                  handleChange("qualification", event.target.value)
+                  handleChange(
+                    "qualification",
+                    event.target.value,
+                  )
                 }
                 placeholder="MBBS, FCPS"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -133,7 +238,10 @@ function Settings() {
                 type="text"
                 value={profile.specialty}
                 onChange={(event) =>
-                  handleChange("specialty", event.target.value)
+                  handleChange(
+                    "specialty",
+                    event.target.value,
+                  )
                 }
                 placeholder="Ophthalmology"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -180,7 +288,10 @@ function Settings() {
                 type="tel"
                 value={profile.phone}
                 onChange={(event) =>
-                  handleChange("phone", event.target.value)
+                  handleChange(
+                    "phone",
+                    event.target.value,
+                  )
                 }
                 placeholder="01XXXXXXXXX"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -200,7 +311,10 @@ function Settings() {
                 type="email"
                 value={profile.email}
                 onChange={(event) =>
-                  handleChange("email", event.target.value)
+                  handleChange(
+                    "email",
+                    event.target.value,
+                  )
                 }
                 placeholder="doctor@example.com"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -222,7 +336,10 @@ function Settings() {
               type="text"
               value={profile.clinicName}
               onChange={(event) =>
-                handleChange("clinicName", event.target.value)
+                handleChange(
+                  "clinicName",
+                  event.target.value,
+                )
               }
               placeholder="Clinic or chamber name"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -242,7 +359,10 @@ function Settings() {
               id="clinicAddress"
               value={profile.clinicAddress}
               onChange={(event) =>
-                handleChange("clinicAddress", event.target.value)
+                handleChange(
+                  "clinicAddress",
+                  event.target.value,
+                )
               }
               rows={3}
               placeholder="Clinic address"
@@ -254,18 +374,19 @@ function Settings() {
         {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            {saved && (
+            {successMessage && (
               <p className="text-sm font-medium text-green-600">
-                Settings saved successfully.
+                {successMessage}
               </p>
             )}
           </div>
 
           <button
             type="submit"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+            disabled={isSaving}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
