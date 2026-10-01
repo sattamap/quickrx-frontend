@@ -3,8 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
 import { getVisitsByPatientId } from "../services/visitApi.ts";
+import { getPrescriptionsByPatientId } from "../services/prescriptionApi.ts";
+
 import type { Patient } from "../types/patient.ts";
 import type { Visit } from "../types/visit.ts";
+import type { Prescription } from "../types/prescription.ts";
 
 function PatientDetails() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +15,7 @@ function PatientDetails() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -27,13 +31,16 @@ function PatientDetails() {
         setIsLoading(true);
         setError("");
 
-        const [patientData, visitData] = await Promise.all([
-          getPatientById(id),
-          getVisitsByPatientId(id),
-        ]);
+        const [patientData, visitData, prescriptionData] =
+          await Promise.all([
+            getPatientById(id),
+            getVisitsByPatientId(id),
+            getPrescriptionsByPatientId(id),
+          ]);
 
         setPatient(patientData);
         setVisits(visitData);
+        setPrescriptions(prescriptionData);
       } catch (error) {
         console.error("Failed to load patient details:", error);
 
@@ -93,6 +100,12 @@ function PatientDetails() {
     );
   }
 
+  const getPrescriptionForVisit = (visitId: string) => {
+    return prescriptions.find(
+      (prescription) => prescription.visitId === visitId,
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,7 +137,9 @@ function PatientDetails() {
 
           <button
             type="button"
-            onClick={() => navigate(`/patients/${patient.id}/new-visit`)}
+            onClick={() =>
+              navigate(`/patients/${patient.id}/new-visit`)
+            }
             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
           >
             + New Visit
@@ -246,7 +261,9 @@ function PatientDetails() {
       {/* Visit History */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="font-semibold text-gray-900">Visit History</h2>
+          <h2 className="font-semibold text-gray-900">
+            Visit History
+          </h2>
 
           <p className="mt-1 text-xs text-gray-500">
             Previous consultations and clinical records
@@ -255,7 +272,7 @@ function PatientDetails() {
 
         {visits.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[650px] text-left text-sm">
+            <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
                   <th className="px-5 py-3 font-medium">Date</th>
@@ -270,53 +287,95 @@ function PatientDetails() {
 
                   <th className="px-5 py-3 font-medium">Age</th>
 
+                  <th className="px-5 py-3 font-medium">
+                    Prescription
+                  </th>
+
                   <th className="px-5 py-3 font-medium">Action</th>
                 </tr>
               </thead>
 
               <tbody>
-                {visits.map((visit) => (
-                  <tr
-                    key={visit.id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
-                  >
-                    <td className="px-5 py-4 text-gray-700">
-                      {new Date(visit.visitDate).toLocaleDateString()}
-                    </td>
+                {visits.map((visit) => {
+                  const prescription = getPrescriptionForVisit(
+                    visit.id,
+                  );
 
-                    <td className="px-5 py-4 text-gray-700">
-                      {visit.chiefComplaint || "—"}
-                    </td>
+                  return (
+                    <tr
+                      key={visit.id}
+                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                    >
+                      <td className="px-5 py-4 text-gray-700">
+                        {new Date(
+                          visit.visitDate,
+                        ).toLocaleDateString()}
+                      </td>
 
-                    <td className="px-5 py-4 text-gray-700">
-                      {visit.diagnosis || "—"}
-                    </td>
+                      <td className="px-5 py-4 text-gray-700">
+                        {visit.chiefComplaint || "—"}
+                      </td>
 
-                    <td className="px-5 py-4 text-gray-700">
-                      {visit.ageAtVisit} years
-                    </td>
+                      <td className="px-5 py-4 text-gray-700">
+                        {visit.diagnosis || "—"}
+                      </td>
 
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            `/patients/${patient.id}/visits/${visit.id}`,
-                          )
-                        }
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-5 py-4 text-gray-700">
+                        {visit.ageAtVisit} years
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {prescription ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
+                              )
+                            }
+                            className="text-sm font-medium text-green-600 hover:text-green-700"
+                          >
+                            View Prescription
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/patients/${patient.id}/visits/${visit.id}/prescription`,
+                              )
+                            }
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                          >
+                            + New Prescription
+                          </button>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/patients/${patient.id}/visits/${visit.id}`,
+                            )
+                          }
+                          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                        >
+                          View Visit
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
           <div className="px-5 py-10 text-center">
-            <p className="font-medium text-gray-900">No visits yet</p>
+            <p className="font-medium text-gray-900">
+              No visits yet
+            </p>
 
             <p className="mt-1 text-sm text-gray-500">
               Start a new visit to create the patient's first

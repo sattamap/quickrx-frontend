@@ -2,8 +2,12 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
 import { getVisitById } from "../services/visitApi.ts";
-import { getPrescriptionByVisitId } from "../services/prescriptionApi.ts";
+import {
+  deletePrescription,
+  getPrescriptionByVisitId,
+} from "../services/prescriptionApi.ts";
 import { getDoctorProfile } from "../services/doctorProfileApi.ts";
+import { getPrescriptionSettings } from "../services/prescriptionSettingsApi.ts";
 
 import { useAsyncData } from "../hooks/useAsyncData";
 
@@ -20,18 +24,17 @@ function PrescriptionPreview() {
       return undefined;
     }
 
-    const [patient, visit, prescription, doctorProfile] =
+    const [patient, visit, prescription, doctorProfile, prescriptionSettings] =
       await Promise.all([
         getPatientById(patientId),
         getVisitById(visitId),
         getPrescriptionByVisitId(visitId),
         getDoctorProfile(),
+        getPrescriptionSettings(),
       ]);
 
     if (visit.patientId !== patient.id) {
-      throw new Error(
-        "This visit does not belong to this patient.",
-      );
+      throw new Error("This visit does not belong to this patient.");
     }
 
     if (!prescription) {
@@ -43,6 +46,7 @@ function PrescriptionPreview() {
       visit,
       prescription,
       doctorProfile,
+      prescriptionSettings,
     };
   }, [patientId, visitId]);
 
@@ -50,9 +54,7 @@ function PrescriptionPreview() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-500">
-            Loading prescription...
-          </p>
+          <p className="text-sm text-gray-500">Loading prescription...</p>
         </div>
       </div>
     );
@@ -77,9 +79,7 @@ function PrescriptionPreview() {
 
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <h1 className="text-lg font-semibold text-red-800">
-            {error
-              ? "Unable to load prescription"
-              : "Prescription not found"}
+            {error ? "Unable to load prescription" : "Prescription not found"}
           </h1>
 
           <p className="mt-1 text-sm text-red-600">
@@ -91,12 +91,32 @@ function PrescriptionPreview() {
     );
   }
 
-  const {
-    patient,
-    visit,
-    prescription,
-    doctorProfile,
-  } = data;
+  const { patient, visit, prescription, doctorProfile, prescriptionSettings } =
+    data;
+
+  const handleDeletePrescription = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this prescription? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deletePrescription(prescription.id);
+
+      navigate(`/patients/${patient.id}/visits/${visit.id}`);
+    } catch (deleteError) {
+      console.error("Failed to delete prescription:", deleteError);
+
+      window.alert(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete prescription. Please try again.",
+      );
+    }
+  };
 
   const hasSpectacleData =
     prescription.spectaclePrescription.right.sph ||
@@ -110,6 +130,9 @@ function PrescriptionPreview() {
     prescription.spectaclePrescription.nearAddition ||
     prescription.spectaclePrescription.pd;
 
+  const shouldShowSpectaclePrescription =
+    prescriptionSettings.showSpectaclePrescription && hasSpectacleData;
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 print:max-w-none">
       {/* Page Header */}
@@ -118,9 +141,7 @@ function PrescriptionPreview() {
           <button
             type="button"
             onClick={() =>
-              navigate(
-                `/patients/${patient.id}/visits/${visit.id}`,
-              )
+              navigate(`/patients/${patient.id}/visits/${visit.id}`)
             }
             className="mb-3 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
@@ -147,6 +168,14 @@ function PrescriptionPreview() {
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Edit Prescription
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeletePrescription}
+            className="rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            Delete Prescription
           </button>
 
           <button
@@ -180,13 +209,14 @@ function PrescriptionPreview() {
               </p>
             )}
 
-            {doctorProfile?.registrationNumber && (
-              <p className="text-[11px] text-gray-600 sm:text-xs">
-                Reg. No: {doctorProfile.registrationNumber}
-              </p>
-            )}
+            {prescriptionSettings.showRegistrationNumber &&
+              doctorProfile?.registrationNumber && (
+                <p className="text-[11px] text-gray-600 sm:text-xs">
+                  Reg. No: {doctorProfile.registrationNumber}
+                </p>
+              )}
 
-            {doctorProfile?.phone && (
+            {prescriptionSettings.showDoctorPhone && doctorProfile?.phone && (
               <p className="text-[11px] text-gray-600 sm:text-xs">
                 Phone: {doctorProfile.phone}
               </p>
@@ -200,16 +230,15 @@ function PrescriptionPreview() {
               </p>
             )}
 
-            {doctorProfile?.clinicAddress && (
-              <p className="max-w-56 text-[11px] text-gray-500">
-                {doctorProfile.clinicAddress}
-              </p>
-            )}
+            {prescriptionSettings.showClinicAddress &&
+              doctorProfile?.clinicAddress && (
+                <p className="max-w-56 text-[11px] text-gray-500">
+                  {doctorProfile.clinicAddress}
+                </p>
+              )}
 
-            {doctorProfile?.email && (
-              <p className="text-[11px] text-gray-500">
-                {doctorProfile.email}
-              </p>
+            {prescriptionSettings.showDoctorEmail && doctorProfile?.email && (
+              <p className="text-[11px] text-gray-500">{doctorProfile.email}</p>
             )}
           </div>
         </div>
@@ -217,40 +246,32 @@ function PrescriptionPreview() {
         {/* Patient Info Strip */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-200 py-2 text-xs sm:text-sm">
           <p>
-            <span className="text-gray-500">
-              Patient:
-            </span>{" "}
-            <span className="font-semibold text-gray-900">
-              {patient.name}
-            </span>
+            <span className="text-gray-500">Patient:</span>{" "}
+            <span className="font-semibold text-gray-900">{patient.name}</span>
           </p>
 
-          <p>
-            <span className="text-gray-500">
-              ID:
-            </span>{" "}
-            <span className="font-medium text-gray-900">
-              {patient.patientId}
-            </span>
-          </p>
+          {prescriptionSettings.showPatientId && (
+            <p>
+              <span className="text-gray-500">ID:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {patient.patientId}
+              </span>
+            </p>
+          )}
 
           <p>
-            <span className="text-gray-500">
-              Age:
-            </span>{" "}
+            <span className="text-gray-500">Age:</span>{" "}
             <span className="font-medium text-gray-900">
               {visit.ageAtVisit} yrs
             </span>
           </p>
 
           <p className="ml-auto">
-            <span className="text-gray-500">
-              Date:
-            </span>{" "}
+            <span className="text-gray-500">Date:</span>{" "}
             <span className="font-medium text-gray-900">
-              {new Date(
-                prescription.prescriptionDate,
-              ).toLocaleDateString("en-GB")}
+              {new Date(prescription.prescriptionDate).toLocaleDateString(
+                "en-GB",
+              )}
             </span>
           </p>
         </div>
@@ -260,18 +281,20 @@ function PrescriptionPreview() {
           {/* Left column */}
           <div className="space-y-4 sm:col-span-4 sm:border-r sm:border-gray-200 sm:pr-4">
             {/* Diagnosis */}
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                Diagnosis
-              </h3>
+            {prescriptionSettings.showDiagnosis && (
+              <div>
+                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Diagnosis
+                </h3>
 
-              <p className="mt-1 whitespace-pre-line text-xs text-gray-800 sm:text-sm">
-                {visit.diagnosis || "—"}
-              </p>
-            </div>
+                <p className="mt-1 whitespace-pre-line text-xs text-gray-800 sm:text-sm">
+                  {visit.diagnosis || "—"}
+                </p>
+              </div>
+            )}
 
             {/* Spectacle Prescription */}
-            {hasSpectacleData && (
+            {shouldShowSpectaclePrescription && (
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                   Spectacle Rx
@@ -280,25 +303,15 @@ function PrescriptionPreview() {
                 <table className="mt-1.5 w-full border-collapse text-[11px] sm:text-xs">
                   <thead>
                     <tr className="border-b border-gray-300 text-left text-gray-500">
-                      <th className="py-1 pr-1 font-medium">
-                        Eye
-                      </th>
+                      <th className="py-1 pr-1 font-medium">Eye</th>
 
-                      <th className="py-1 pr-1 font-medium">
-                        SPH
-                      </th>
+                      <th className="py-1 pr-1 font-medium">SPH</th>
 
-                      <th className="py-1 pr-1 font-medium">
-                        CYL
-                      </th>
+                      <th className="py-1 pr-1 font-medium">CYL</th>
 
-                      <th className="py-1 pr-1 font-medium">
-                        AXIS
-                      </th>
+                      <th className="py-1 pr-1 font-medium">AXIS</th>
 
-                      <th className="py-1 font-medium">
-                        VA
-                      </th>
+                      <th className="py-1 font-medium">VA</th>
                     </tr>
                   </thead>
 
@@ -310,23 +323,20 @@ function PrescriptionPreview() {
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .right.sph || "—"}
+                        {prescription.spectaclePrescription.right.sph || "—"}
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .right.cyl || "—"}
+                        {prescription.spectaclePrescription.right.cyl || "—"}
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .right.axis || "—"}
+                        {prescription.spectaclePrescription.right.axis || "—"}
                       </td>
 
                       <td className="py-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .right.visualAcuity || "—"}
+                        {prescription.spectaclePrescription.right
+                          .visualAcuity || "—"}
                       </td>
                     </tr>
 
@@ -337,23 +347,20 @@ function PrescriptionPreview() {
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .left.sph || "—"}
+                        {prescription.spectaclePrescription.left.sph || "—"}
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .left.cyl || "—"}
+                        {prescription.spectaclePrescription.left.cyl || "—"}
                       </td>
 
                       <td className="py-1 pr-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .left.axis || "—"}
+                        {prescription.spectaclePrescription.left.axis || "—"}
                       </td>
 
                       <td className="py-1 text-gray-700">
-                        {prescription.spectaclePrescription
-                          .left.visualAcuity || "—"}
+                        {prescription.spectaclePrescription.left.visualAcuity ||
+                          "—"}
                       </td>
                     </tr>
                   </tbody>
@@ -361,17 +368,12 @@ function PrescriptionPreview() {
 
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-700 sm:text-xs">
                   <p>
-                    <span className="text-gray-500">
-                      Add:
-                    </span>{" "}
-                    {prescription.spectaclePrescription
-                      .nearAddition || "—"}
+                    <span className="text-gray-500">Add:</span>{" "}
+                    {prescription.spectaclePrescription.nearAddition || "—"}
                   </p>
 
                   <p>
-                    <span className="text-gray-500">
-                      PD:
-                    </span>{" "}
+                    <span className="text-gray-500">PD:</span>{" "}
                     {prescription.spectaclePrescription.pd
                       ? `${prescription.spectaclePrescription.pd} mm`
                       : "—"}
@@ -384,74 +386,63 @@ function PrescriptionPreview() {
           {/* Right column */}
           <div className="sm:col-span-8">
             <h3 className="flex items-baseline gap-1.5 text-sm font-bold text-gray-900 sm:text-base">
-              <span className="text-lg font-bold sm:text-xl">
-                ℞
-              </span>
+              <span className="text-lg font-bold sm:text-xl">℞</span>
 
-              <span className="sr-only">
-                Medicines
-              </span>
+              <span className="sr-only">Medicines</span>
             </h3>
 
             {prescription.medicines.length > 0 ? (
               <ol className="mt-1 space-y-2">
-                {prescription.medicines.map(
-                  (medicine, index) => (
-                    <li
-                      key={medicine.id}
-                      className="flex gap-2"
-                    >
-                      <span className="w-4 shrink-0 text-right text-xs font-semibold text-gray-500 sm:text-sm">
-                        {index + 1}.
-                      </span>
+                {prescription.medicines.map((medicine, index) => (
+                  <li key={medicine.id} className="flex gap-2">
+                    <span className="w-4 shrink-0 text-right text-xs font-semibold text-gray-500 sm:text-sm">
+                      {index + 1}.
+                    </span>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-gray-900 sm:text-sm">
-                          {medicine.name}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-900 sm:text-sm">
+                        {medicine.name}
 
-                          {medicine.strength && (
-                            <span className="font-normal text-gray-600">
-                              {" "}
-                              ({medicine.strength})
-                            </span>
-                          )}
+                        {medicine.strength && (
+                          <span className="font-normal text-gray-600">
+                            {" "}
+                            ({medicine.strength})
+                          </span>
+                        )}
 
-                          {medicine.form && (
-                            <span className="font-normal text-gray-500">
-                              {" "}
-                              — {medicine.form}
-                            </span>
-                          )}
+                        {medicine.form && (
+                          <span className="font-normal text-gray-500">
+                            {" "}
+                            — {medicine.form}
+                          </span>
+                        )}
+                      </p>
+
+                      {(medicine.dose ||
+                        medicine.frequency ||
+                        medicine.duration) && (
+                        <p className="text-[11px] text-gray-700 sm:text-xs">
+                          {[
+                            medicine.dose,
+                            medicine.frequency,
+                            medicine.duration,
+                          ]
+                            .filter(Boolean)
+                            .join("  —  ")}
                         </p>
+                      )}
 
-                        {(medicine.dose ||
-                          medicine.frequency ||
-                          medicine.duration) && (
-                          <p className="text-[11px] text-gray-700 sm:text-xs">
-                            {[
-                              medicine.dose,
-                              medicine.frequency,
-                              medicine.duration,
-                            ]
-                              .filter(Boolean)
-                              .join("  —  ")}
-                          </p>
-                        )}
-
-                        {medicine.instructions && (
-                          <p className="text-[11px] italic text-gray-500 sm:text-xs">
-                            {medicine.instructions}
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ),
-                )}
+                      {medicine.instructions && (
+                        <p className="text-[11px] italic text-gray-500 sm:text-xs">
+                          {medicine.instructions}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
               </ol>
             ) : (
-              <p className="mt-1 text-xs text-gray-500">
-                No medicines added.
-              </p>
+              <p className="mt-1 text-xs text-gray-500">No medicines added.</p>
             )}
           </div>
         </div>
@@ -480,31 +471,34 @@ function PrescriptionPreview() {
         </div>
 
         {/* Footer / Signature */}
-        <div className="mt-4 flex items-end justify-between border-t border-gray-200 pt-4">
-          <p className="text-[10px] text-gray-400">
-            Generated by QuickRx — not valid without signature
-          </p>
-
-          <div className="text-right">
-            <div className="mb-1 h-8 border-b border-gray-400" />
-
-            <p className="text-xs font-semibold text-gray-900 sm:text-sm">
-              {doctorProfile?.doctorName || "Doctor Name"}
+        {prescriptionSettings.showSignature && (
+          <div className="prescription-signature mt-4 flex items-end justify-between border-t border-gray-200 pt-4">
+            <p className="text-[10px] text-gray-400">
+              Generated by QuickRx — not valid without signature
             </p>
 
-            {doctorProfile?.specialty && (
-              <p className="text-[11px] text-gray-500">
-                {doctorProfile.qualification}
-              </p>
-            )}
+            <div className="text-right">
+              <div className="mb-1 h-8 border-b border-gray-400" />
 
-            {doctorProfile?.registrationNumber && (
-              <p className="text-[10px] text-gray-500">
-                Reg. No: {doctorProfile.registrationNumber}
+              <p className="text-xs font-semibold text-gray-900 sm:text-sm">
+                {doctorProfile?.doctorName || "Doctor Name"}
               </p>
-            )}
+
+              {doctorProfile?.qualification && (
+                <p className="text-[11px] text-gray-500">
+                  {doctorProfile.qualification}
+                </p>
+              )}
+
+              {prescriptionSettings.showRegistrationNumber &&
+                doctorProfile?.registrationNumber && (
+                  <p className="text-[10px] text-gray-500">
+                    Reg. No: {doctorProfile.registrationNumber}
+                  </p>
+                )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

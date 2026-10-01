@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import VisitDetails from "./pages/VisitDetails";
 import PrescriptionBuilder from "./pages/PrescriptionBuilder";
 import PrescriptionPreview from "./pages/PrescriptionPreview";
+import EditVisit from "./pages/EditVisit";
 
 function App() {
   return (
@@ -27,6 +28,10 @@ function App() {
           <Route
             path="/patients/:patientId/visits/:visitId"
             element={<VisitDetails />}
+          />
+          <Route
+            path="/patients/:patientId/visits/:visitId/edit"
+            element={<EditVisit />}
           />
           <Route
             path="/patients/:patientId/visits/:visitId/prescription"

@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
-import { getVisitById } from "../services/visitApi.ts";
-import { getPrescriptionByVisitId } from "../services/prescriptionService.ts";
+import { deleteVisit, getVisitById } from "../services/visitApi.ts";
+import { getPrescriptionByVisitId } from "../services/prescriptionApi.ts";
 import { useAsyncData } from "../hooks/useAsyncData";
 
 function VisitDetails() {
@@ -63,6 +63,26 @@ function VisitDetails() {
 
   const { patient, visit, prescription } = data;
 
+  const handleDeleteVisit = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this visit? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteVisit(visit.id);
+
+      navigate(`/patients/${patient.id}`);
+    } catch (deleteError) {
+      console.error("Failed to delete visit:", deleteError);
+
+      window.alert("Unable to delete the visit. Please try again.");
+    }
+  };
+
   const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
   return (
@@ -79,9 +99,7 @@ function VisitDetails() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Visit Details
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Visit Details</h1>
 
             <p className="mt-1 text-sm text-gray-500">
               {patient.name} · {patient.patientId}
@@ -89,6 +107,26 @@ function VisitDetails() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
+            {/* Edit Visit */}
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/patients/${patient.id}/visits/${visit.id}/edit`)
+              }
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Edit Visit
+            </button>
+            {/* Delete Visit */}
+            <button
+              type="button"
+              onClick={handleDeleteVisit}
+              className="rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Delete Visit
+            </button>
+
+            {/* Prescription */}
             {prescription ? (
               <button
                 type="button"
@@ -115,6 +153,7 @@ function VisitDetails() {
               </button>
             )}
 
+            {/* New Visit */}
             <button
               type="button"
               onClick={() => navigate(`/patients/${patient.id}/new-visit`)}
@@ -402,9 +441,7 @@ function VisitDetails() {
 
       {/* Clinical Notes */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Clinical Notes
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Clinical Notes</h2>
 
         <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">
           {visit.clinicalNotes || "No clinical notes recorded"}
