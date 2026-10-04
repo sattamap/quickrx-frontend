@@ -1,107 +1,75 @@
+import { apiRequest } from "./apiClient";
+
 import type {
-  CreatePatientInput,
   Patient,
+  CreatePatientInput,
 } from "../types/patient";
 
-const API_URL = "http://localhost:5000/api/patients";
+const API_URL = "/patients";
 
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-export const getPatients = async (): Promise<Patient[]> => {
-  const response = await fetch(API_URL);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch patients.");
-  }
-
-  const result: ApiResponse<Patient[]> = await response.json();
-
-  return result.data;
+/**
+ * Get all patients belonging to the authenticated user.
+ */
+export const getPatients = async (): Promise<
+  Patient[]
+> => {
+  return apiRequest<Patient[]>(
+    API_URL,
+  );
 };
 
+/**
+ * Get one patient.
+ */
 export const getPatientById = async (
   id: string,
 ): Promise<Patient> => {
-  const response = await fetch(`${API_URL}/${id}`);
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Patient not found.");
-    }
-
-    throw new Error("Failed to fetch patient.");
-  }
-
-  const result: ApiResponse<Patient> = await response.json();
-
-  return result.data;
+  return apiRequest<Patient>(
+    `${API_URL}/${id}`,
+  );
 };
 
+/**
+ * Create a patient.
+ */
 export const createPatient = async (
   data: CreatePatientInput,
 ): Promise<Patient> => {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return apiRequest<Patient>(
+    API_URL,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to create patient.",
-    );
-  }
-
-  const result: ApiResponse<Patient> = await response.json();
-
-  return result.data;
+  );
 };
 
+/**
+ * Update a patient.
+ */
 export const updatePatient = async (
   id: string,
   data: Partial<CreatePatientInput>,
 ): Promise<Patient> => {
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+  return apiRequest<Patient>(
+    `${API_URL}/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to update patient.",
-    );
-  }
-
-  const result: ApiResponse<Patient> = await response.json();
-
-  return result.data;
+  );
 };
 
+/**
+ * Delete a patient.
+ */
 export const deletePatient = async (
   id: string,
 ): Promise<void> => {
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to delete patient.",
-    );
-  }
+  await apiRequest<void>(
+    `${API_URL}/${id}`,
+    {
+      method: "DELETE",
+    },
+  );
 };

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../context/useAuth";
 import { getPatients } from "../services/patientApi";
 import { getVisits } from "../services/visitApi";
 import { getPrescriptions } from "../services/prescriptionApi";
@@ -8,6 +9,7 @@ import { useAsyncData } from "../hooks/useAsyncData";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data, isLoading, error } = useAsyncData(async () => {
     const [patients, visits, prescriptions] = await Promise.all([
@@ -43,12 +45,11 @@ function Dashboard() {
     if (!data) return [];
 
     return [...data.patients]
-      .sort((a, b) => {
-        return (
+      .sort(
+        (a, b) =>
           new Date(b.createdAt).getTime() -
-          new Date(a.createdAt).getTime()
-        );
-      })
+          new Date(a.createdAt).getTime(),
+      )
       .slice(0, 4)
       .map((patient) => {
         const patientVisits = data.visits
@@ -125,12 +126,14 @@ function Dashboard() {
     },
   ];
 
+  const doctorName = user?.name?.trim() || "Doctor";
+
   if (error) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Good morning, Dr. Romel
+            Good morning, Dr. {doctorName}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
@@ -154,7 +157,7 @@ function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          Good morning, Dr. Romel
+          Good morning, Dr. {doctorName}
         </h1>
 
         <p className="mt-1 text-sm text-gray-500">

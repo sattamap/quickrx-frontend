@@ -1,123 +1,82 @@
+import { apiRequest } from "./apiClient";
+
 import type {
-  CreateVisitInput,
   Visit,
-} from "../types/visit.ts";
+  CreateVisitInput,
+} from "../types/visit";
 
-const API_URL = "http://localhost:5000/api/visits";
+const API_URL = "/visits";
 
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
+/**
+ * Get all visits belonging to the authenticated user.
+ */
 export const getVisits = async (): Promise<Visit[]> => {
-  const response = await fetch(API_URL);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch visits.");
-  }
-
-  const result: ApiResponse<Visit[]> = await response.json();
-
-  return result.data;
+  return apiRequest<Visit[]>(API_URL);
 };
 
+/**
+ * Get all visits for a specific patient.
+ */
 export const getVisitsByPatientId = async (
   patientId: string,
 ): Promise<Visit[]> => {
-  const response = await fetch(
+  return apiRequest<Visit[]>(
     `${API_URL}/patient/${patientId}`,
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch patient visits.");
-  }
-
-  const result: ApiResponse<Visit[]> = await response.json();
-
-  return result.data;
 };
 
+/**
+ * Get a single visit.
+ */
 export const getVisitById = async (
   id: string,
 ): Promise<Visit> => {
-  const response = await fetch(`${API_URL}/${id}`);
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Visit not found.");
-    }
-
-    throw new Error("Failed to fetch visit.");
-  }
-
-  const result: ApiResponse<Visit> = await response.json();
-
-  return result.data;
+  return apiRequest<Visit>(
+    `${API_URL}/${id}`,
+  );
 };
 
+/**
+ * Create a new visit.
+ */
 export const createVisit = async (
   data: CreateVisitInput,
 ): Promise<Visit> => {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return apiRequest<Visit>(
+    API_URL,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to create visit.",
-    );
-  }
-
-  const result: ApiResponse<Visit> = await response.json();
-
-  return result.data;
+  );
 };
 
+/**
+ * Update an existing visit.
+ */
 export const updateVisit = async (
   id: string,
   data: Partial<CreateVisitInput>,
 ): Promise<Visit> => {
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+  return apiRequest<Visit>(
+    `${API_URL}/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to update visit.",
-    );
-  }
-
-  const result: ApiResponse<Visit> = await response.json();
-
-  return result.data;
+  );
 };
 
+/**
+ * Delete a visit.
+ */
 export const deleteVisit = async (
   id: string,
 ): Promise<void> => {
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    const errorResult = await response.json().catch(() => null);
-
-    throw new Error(
-      errorResult?.message || "Failed to delete visit.",
-    );
-  }
+  await apiRequest<void>(
+    `${API_URL}/${id}`,
+    {
+      method: "DELETE",
+    },
+  );
 };

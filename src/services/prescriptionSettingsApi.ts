@@ -1,69 +1,18 @@
+import { apiRequest } from "./apiClient";
 import type { PrescriptionSettings } from "../types/prescriptionSettings";
 
-const API_URL =
-  "http://localhost:5000/api/prescription-settings";
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
+const API_URL = "/prescription-settings";
 
 export const getPrescriptionSettings =
   async (): Promise<PrescriptionSettings> => {
-    const response = await fetch(API_URL);
-
-    if (!response.ok) {
-      throw new Error(
-        "Failed to load prescription settings.",
-      );
-    }
-
-    const result: ApiResponse<PrescriptionSettings> =
-      await response.json();
-
-    if (!result.success) {
-      throw new Error(
-        result.message ??
-          "Failed to load prescription settings.",
-      );
-    }
-
-    return result.data;
+    return apiRequest<PrescriptionSettings>(API_URL);
   };
 
-export const updatePrescriptionSettings =
-  async (
-    data: PrescriptionSettings,
-  ): Promise<PrescriptionSettings> => {
-    const response = await fetch(API_URL, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const result = await response
-        .json()
-        .catch(() => null);
-
-      throw new Error(
-        result?.message ??
-          "Failed to save prescription settings.",
-      );
-    }
-
-    const result: ApiResponse<PrescriptionSettings> =
-      await response.json();
-
-    if (!result.success) {
-      throw new Error(
-        result.message ??
-          "Failed to save prescription settings.",
-      );
-    }
-
-    return result.data;
-  };
+export const updatePrescriptionSettings = async (
+  data: PrescriptionSettings,
+): Promise<PrescriptionSettings> => {
+  return apiRequest<PrescriptionSettings>(API_URL, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
