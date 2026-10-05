@@ -12,4 +12,7 @@ export interface Patient {
   createdAt: string;
 }
 
-export type CreatePatientInput = Omit<Patient, "id" | "createdAt">;
+export type CreatePatientInput = Omit<
+  Patient,
+  "id" | "patientId" | "createdAt"
+>;

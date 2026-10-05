@@ -37,12 +37,19 @@ export interface EyeExamination {
   };
 }
 
+export interface VitalSigns {
+  weight: number | null;
+  height: number | null;
+  bloodPressure: string;
+}
+
 export interface Visit {
   id: string;
   patientId: string;
   ageAtVisit: number;
   visitDate: string;
   chiefComplaint: string;
+  vitalSigns: VitalSigns;
   examination: EyeExamination;
   diagnosis: string;
   clinicalNotes: string;

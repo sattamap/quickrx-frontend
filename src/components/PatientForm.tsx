@@ -15,7 +15,6 @@ function PatientForm({
   isSubmitting = false,
 }: PatientFormProps) {
   const [formData, setFormData] = useState<CreatePatientInput>({
-    patientId: initialData?.patientId ?? "",
     name: initialData?.name ?? "",
     age: initialData?.age ?? 0,
     dateOfBirth: initialData?.dateOfBirth ?? "",
@@ -56,11 +55,6 @@ function PatientForm({
       return;
     }
 
-    if (!formData.phone.trim()) {
-      setError("Phone number is required.");
-      return;
-    }
-
     onSubmit({
       ...formData,
       name: formData.name.trim(),
@@ -91,20 +85,20 @@ function PatientForm({
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {/* Patient ID */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Patient ID
-            </label>
+          {initialData && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Patient ID
+              </label>
 
-            <input
-              type="text"
-              name="patientId"
-              value={formData.patientId}
-              readOnly
-              placeholder="Generated automatically"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500"
-            />
-          </div>
+              <input
+                type="text"
+                value={initialData.patientId}
+                readOnly
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500"
+              />
+            </div>
+          )}
 
           {/* Name */}
           <div>
@@ -178,7 +172,7 @@ function PatientForm({
           {/* Phone */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Phone <span className="text-red-500">*</span>
+              Phone
             </label>
 
             <input
@@ -186,9 +180,8 @@ function PatientForm({
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="Enter phone number"
+              placeholder="01712345678"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              required
             />
           </div>
         </div>
@@ -222,7 +215,13 @@ function PatientForm({
           Medical Information
         </h2>
 
+        <p className="mt-1 text-sm text-gray-500">
+          Record important medical history and allergy information that may be
+          relevant to the patient's care.
+        </p>
+
         <div className="mt-4 space-y-4">
+          {/* Allergies */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Allergies
@@ -233,11 +232,17 @@ function PatientForm({
               name="allergies"
               value={formData.allergies}
               onChange={handleChange}
-              placeholder="e.g. Penicillin, None known"
+              placeholder="e.g. Penicillin, Aspirin, Sulfa drugs, food allergies, or None known"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+
+            <p className="mt-1.5 text-xs text-gray-500">
+              Include known drug, food, or other allergies. If there are no
+              known allergies, enter "None known".
+            </p>
           </div>
 
+          {/* Notes */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Notes
@@ -248,9 +253,15 @@ function PatientForm({
               value={formData.notes}
               onChange={handleChange}
               rows={4}
-              placeholder="Additional notes about the patient"
+              placeholder="e.g. Previous eye surgery, chronic diseases, current medications, relevant medical history, family history, or other important information"
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+
+            <p className="mt-1.5 text-xs text-gray-500">
+              Add important background information that may help during future
+              visits. Avoid entering detailed examination findings here; record
+              visit-specific findings in the Visit section.
+            </p>
           </div>
         </div>
       </div>

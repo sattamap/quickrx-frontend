@@ -9,14 +9,18 @@ import type { CreateVisitInput } from "../types/visit.ts";
 import type { Patient } from "../types/patient.ts";
 
 /* ------------------------------------------------------------------ */
-/* Loader wrapper                                                      */
+/* Loader wrapper                                                     */
 /* ------------------------------------------------------------------ */
 
 function NewVisit() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: patient, isLoading, error } = useAsyncData(
+  const {
+    data: patient,
+    isLoading,
+    error,
+  } = useAsyncData(
     () => (id ? getPatientById(id) : Promise.resolve(undefined)),
     [id],
   );
@@ -60,7 +64,7 @@ function NewVisit() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Form                                                                */
+/* Form                                                               */
 /* ------------------------------------------------------------------ */
 
 interface NewVisitFormProps {
@@ -75,21 +79,53 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [clinicalNotes, setClinicalNotes] = useState("");
+
+  const [vitalSigns, setVitalSigns] = useState({
+    weight: "",
+    height: "",
+    bloodPressure: "",
+  });
+
   const [visualAcuity, setVisualAcuity] = useState({
-    right: { unaided: "", aided: "" },
-    left: { unaided: "", aided: "" },
+    right: {
+      unaided: "",
+      aided: "",
+    },
+    left: {
+      unaided: "",
+      aided: "",
+    },
   });
 
   const [refraction, setRefraction] = useState({
-    right: { sph: "", cyl: "", axis: "", visualAcuity: "" },
-    left: { sph: "", cyl: "", axis: "", visualAcuity: "" },
+    right: {
+      sph: "",
+      cyl: "",
+      axis: "",
+      visualAcuity: "",
+    },
+    left: {
+      sph: "",
+      cyl: "",
+      axis: "",
+      visualAcuity: "",
+    },
   });
 
-  const [iop, setIop] = useState({ right: "", left: "" });
+  const [iop, setIop] = useState({
+    right: "",
+    left: "",
+  });
 
   const [eyeExamination, setEyeExamination] = useState({
-    anteriorSegment: { right: "", left: "" },
-    fundus: { right: "", left: "" },
+    anteriorSegment: {
+      right: "",
+      left: "",
+    },
+    fundus: {
+      right: "",
+      left: "",
+    },
   });
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -102,6 +138,16 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
       ageAtVisit: patient.age,
       visitDate: new Date().toISOString(),
       chiefComplaint: chiefComplaint.trim(),
+
+      vitalSigns: {
+        weight:
+          vitalSigns.weight.trim() === "" ? null : Number(vitalSigns.weight),
+
+        height:
+          vitalSigns.height.trim() === "" ? null : Number(vitalSigns.height),
+
+        bloodPressure: vitalSigns.bloodPressure.trim(),
+      },
 
       examination: {
         visualAcuity: {
@@ -143,7 +189,11 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
     } catch (submitError) {
       console.error("Failed to save visit:", submitError);
 
-      window.alert("Unable to save visit. Please try again.");
+      window.alert(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save visit. Please try again.",
+      );
 
       setIsSaving(false);
     }
@@ -188,6 +238,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
           </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {/* Patient */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
                 Patient
@@ -201,6 +252,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
               />
             </div>
 
+            {/* Visit Date */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
                 Visit Date
@@ -215,18 +267,125 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
             </div>
           </div>
 
+          {/* Chief Complaint */}
           <div className="mt-4">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Chief Complaint
+              Chief Complaint <span className="text-red-500">*</span>
             </label>
+
+            <p className="mb-2 text-xs text-gray-500">
+              Record the main reason for today's visit, including symptoms and
+              their duration when relevant.
+            </p>
 
             <textarea
               value={chiefComplaint}
               onChange={(event) => setChiefComplaint(event.target.value)}
               rows={3}
-              placeholder="e.g. blurred vision, eye pain, redness..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="e.g. blurred vision for 2 months, eye pain, redness, watering, headache, difficulty seeing at night..."
+              className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+          </div>
+        </section>
+
+        {/* Vital Signs */}
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Vital Signs</h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Record the patient's measurements taken during this visit.
+          </p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {/* Weight */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Weight
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  step="0.1"
+                  value={vitalSigns.weight}
+                  onChange={(event) =>
+                    setVitalSigns((previous) => ({
+                      ...previous,
+                      weight: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. 72"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+
+                <span className="shrink-0 text-sm text-gray-500">kg</span>
+              </div>
+
+              <p className="mt-1.5 text-xs text-gray-500">
+                Patient's current weight.
+              </p>
+            </div>
+
+            {/* Height */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Height
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="300"
+                  step="0.1"
+                  value={vitalSigns.height}
+                  onChange={(event) =>
+                    setVitalSigns((previous) => ({
+                      ...previous,
+                      height: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. 170"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+
+                <span className="shrink-0 text-sm text-gray-500">cm</span>
+              </div>
+
+              <p className="mt-1.5 text-xs text-gray-500">
+                Patient's height in centimeters.
+              </p>
+            </div>
+
+            {/* Blood Pressure */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Blood Pressure
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={vitalSigns.bloodPressure}
+                  onChange={(event) =>
+                    setVitalSigns((previous) => ({
+                      ...previous,
+                      bloodPressure: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. 120/80"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+
+                <span className="shrink-0 text-sm text-gray-500">mmHg</span>
+              </div>
+
+              <p className="mt-1.5 text-xs text-gray-500">
+                Enter systolic/diastolic pressure, e.g. 120/80.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -256,6 +415,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                     </h4>
 
                     <div className="grid gap-3 sm:grid-cols-2">
+                      {/* Unaided VA */}
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">
                           Unaided VA
@@ -278,6 +438,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                         />
                       </div>
 
+                      {/* Aided VA */}
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">
                           Aided VA
@@ -309,6 +470,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                     </h4>
 
                     <div className="grid gap-3 sm:grid-cols-2">
+                      {/* Unaided VA */}
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">
                           Unaided VA
@@ -331,6 +493,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                         />
                       </div>
 
+                      {/* Aided VA */}
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">
                           Aided VA
@@ -421,7 +584,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
               </div>
             </div>
 
-            {/* Refraction — full width, needs room for the table */}
+            {/* Refraction */}
             <div className="rounded-lg border border-gray-200 p-4">
               <h3 className="mb-4 text-base font-semibold text-gray-800">
                 Refraction
@@ -598,14 +761,15 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
               </div>
             </div>
 
-            {/* Eye Examination — full width, needs room for textareas */}
+            {/* Eye Examination */}
             <div className="rounded-lg border border-gray-200 p-4">
               <h3 className="mb-1 text-base font-semibold text-gray-800">
                 Eye Examination
               </h3>
 
               <p className="mb-5 text-sm text-gray-500">
-                Anterior Segment / Fundus
+                Record detailed anterior segment and fundus findings for each
+                eye.
               </p>
 
               {/* Anterior Segment */}
@@ -633,7 +797,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                           },
                         }))
                       }
-                      placeholder="Enter anterior segment findings..."
+                      placeholder="e.g. Lids normal, conjunctiva quiet, cornea clear, AC deep and quiet, pupil normal, lens clear..."
                       className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
@@ -656,7 +820,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                           },
                         }))
                       }
-                      placeholder="Enter anterior segment findings..."
+                      placeholder="e.g. Lids normal, conjunctiva quiet, cornea clear, AC deep and quiet, pupil normal, lens clear..."
                       className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
@@ -688,7 +852,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                           },
                         }))
                       }
-                      placeholder="Enter fundus findings..."
+                      placeholder="e.g. Disc normal, C/D 0.3, vessels normal, macula normal, retina attached..."
                       className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
@@ -711,7 +875,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                           },
                         }))
                       }
-                      placeholder="Enter fundus findings..."
+                      placeholder="e.g. Disc normal, C/D 0.3, vessels normal, macula normal, retina attached..."
                       className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
@@ -728,14 +892,16 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
           </h3>
 
           <p className="mb-4 text-sm text-gray-500">
-            Enter the clinical diagnosis for this visit.
+            Record the clinical diagnosis or impression based on the patient's
+            symptoms and examination findings. Include laterality where
+            applicable (OD = right, OS = left, OU = both eyes).
           </p>
 
           <textarea
             rows={3}
             value={diagnosis}
             onChange={(event) => setDiagnosis(event.target.value)}
-            placeholder="Enter diagnosis..."
+            placeholder="e.g. Myopia OU, Cataract OD, Primary open-angle glaucoma OS, Dry eye disease OU..."
             className="w-full resize-y rounded-lg border border-gray-300 px-3 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </div>
@@ -747,14 +913,15 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
           </h3>
 
           <p className="mb-4 text-sm text-gray-500">
-            Add relevant clinical observations or additional notes.
+            Record relevant clinical observations, history, treatment decisions,
+            patient response, or other information related to today's visit.
           </p>
 
           <textarea
             rows={5}
             value={clinicalNotes}
             onChange={(event) => setClinicalNotes(event.target.value)}
-            placeholder="Enter clinical notes..."
+            placeholder="e.g. Symptoms started 2 months ago. No history of trauma. Patient advised regarding glasses use. Follow-up recommended in 4 weeks..."
             className="w-full resize-y rounded-lg border border-gray-300 px-3 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </div>
