@@ -4,6 +4,11 @@ import { getPatientById } from "../services/patientApi.ts";
 import { deleteVisit, getVisitById } from "../services/visitApi.ts";
 import { getPrescriptionByVisitId } from "../services/prescriptionApi.ts";
 import { useAsyncData } from "../hooks/useAsyncData";
+import {
+  showDeleteConfirmation,
+  showError,
+  showSuccess,
+} from "../utils/alert.ts";
 
 function VisitDetails() {
   const { patientId, visitId } = useParams();
@@ -64,7 +69,7 @@ function VisitDetails() {
   const { patient, visit, prescription } = data;
 
   const handleDeleteVisit = async () => {
-    const confirmed = window.confirm(
+    const confirmed = await showDeleteConfirmation(
       "Are you sure you want to delete this visit? This action cannot be undone.",
     );
 
@@ -75,11 +80,17 @@ function VisitDetails() {
     try {
       await deleteVisit(visit.id);
 
+      await showSuccess("Visit deleted successfully.");
+
       navigate(`/patients/${patient.id}`);
     } catch (deleteError) {
       console.error("Failed to delete visit:", deleteError);
 
-      window.alert("Unable to delete the visit. Please try again.");
+      await showError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete the visit. Please try again.",
+      );
     }
   };
 
@@ -221,6 +232,49 @@ function VisitDetails() {
           <p className="mt-1 text-sm text-gray-700">
             {visit.chiefComplaint || "Not recorded"}
           </p>
+        </div>
+      </div>
+
+      {/* Vital Signs */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">Vital Signs</h2>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-xs font-medium uppercase text-gray-500">
+              Weight
+            </p>
+
+            <p className="mt-1 text-lg font-semibold text-gray-900">
+              {visit.vitalSigns?.weight !== null &&
+              visit.vitalSigns?.weight !== undefined
+                ? `${visit.vitalSigns.weight} kg`
+                : "—"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-xs font-medium uppercase text-gray-500">
+              Height
+            </p>
+
+            <p className="mt-1 text-lg font-semibold text-gray-900">
+              {visit.vitalSigns?.height !== null &&
+              visit.vitalSigns?.height !== undefined
+                ? `${visit.vitalSigns.height} cm`
+                : "—"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-xs font-medium uppercase text-gray-500">
+              Blood Pressure
+            </p>
+
+            <p className="mt-1 text-lg font-semibold text-gray-900">
+              {visit.vitalSigns?.bloodPressure || "—"}
+            </p>
+          </div>
         </div>
       </div>
 

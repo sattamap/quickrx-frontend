@@ -242,9 +242,8 @@ function PrescriptionPreview() {
             )}
           </div>
         </div>
-
-        {/* Patient Info Strip */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-200 py-2 text-xs sm:text-sm">
+        {/* Patient & Vital Signs Info Strip */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-gray-200 py-2 text-xs sm:text-sm">
           <p>
             <span className="text-gray-500">Patient:</span>{" "}
             <span className="font-semibold text-gray-900">{patient.name}</span>
@@ -263,6 +262,33 @@ function PrescriptionPreview() {
             <span className="text-gray-500">Age:</span>{" "}
             <span className="font-medium text-gray-900">
               {visit.ageAtVisit} yrs
+            </span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">Weight:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {visit.vitalSigns?.weight !== null &&
+              visit.vitalSigns?.weight !== undefined
+                ? `${visit.vitalSigns.weight} kg`
+                : "—"}
+            </span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">Height:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {visit.vitalSigns?.height !== null &&
+              visit.vitalSigns?.height !== undefined
+                ? `${visit.vitalSigns.height} cm`
+                : "—"}
+            </span>
+          </p>
+
+          <p>
+            <span className="text-gray-500">BP:</span>{" "}
+            <span className="font-medium text-gray-900">
+              {visit.vitalSigns?.bloodPressure || "—"}
             </span>
           </p>
 

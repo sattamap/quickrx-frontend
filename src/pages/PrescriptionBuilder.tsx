@@ -21,6 +21,13 @@ import { getPrescriptionSettings } from "../services/prescriptionSettingsApi.ts"
 
 import { searchMedicines, type Medicine } from "../utils/medicineData.ts";
 
+import {
+  showError,
+  showSuccess,
+  showWarning,
+  showDeleteConfirmation,
+} from "../utils/alert.ts";
+
 const emptySpectaclePrescription: SpectaclePrescription = {
   right: {
     sph: "",
@@ -253,8 +260,9 @@ function PrescriptionBuilder() {
     }, 0);
   };
 
-  const handleAddMedicine = () => {
+  const handleAddMedicine =async  () => {
     if (!medicineForm.name.trim()) {
+      await showWarning("Please enter or select a medicine name.");
       return;
     }
 
@@ -275,8 +283,20 @@ function PrescriptionBuilder() {
     setShowSuggestions(false);
   };
 
-  const handleRemoveMedicine = (id: string) => {
-    setMedicines((current) => current.filter((medicine) => medicine.id !== id));
+  const handleRemoveMedicine = async (id: string) => {
+    const medicine = medicines.find((item) => item.id === id);
+
+    const confirmed = await showDeleteConfirmation(
+      medicine
+        ? `Remove "${medicine.name}" from this prescription?`
+        : "Remove this medicine from the prescription?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMedicines((current) => current.filter((item) => item.id !== id));
   };
 
   /*
@@ -314,6 +334,7 @@ function PrescriptionBuilder() {
    */
   const handleSavePrescription = async () => {
     if (!patient || !visit) {
+      await showError("Patient or visit information is missing.");
       return;
     }
 
@@ -345,14 +366,22 @@ function PrescriptionBuilder() {
 
       setExistingPrescription(savedPrescription);
 
+      await showSuccess(
+        existingPrescription
+          ? "Prescription updated successfully."
+          : "Prescription saved successfully.",
+      );
+
       navigate(
         `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
       );
     } catch (error) {
       console.error("Failed to save prescription:", error);
 
-      setLoadError(
-        error instanceof Error ? error.message : "Failed to save prescription.",
+      await showError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save prescription. Please try again.",
       );
     } finally {
       setIsSaving(false);

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import PatientForm from "../components/PatientForm";
+
 import type {
   CreatePatientInput,
   Patient,
 } from "../types/patient";
+
 import {
   createPatient,
   deletePatient,
@@ -12,13 +15,20 @@ import {
   updatePatient,
 } from "../services/patientApi";
 
+import {
+  showDeleteConfirmation,
+  showError,
+  showSuccess,
+} from "../utils/alert";
+
 function Patients() {
   const navigate = useNavigate();
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<Patient | undefined>();
+  const [editingPatient, setEditingPatient] =
+    useState<Patient | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -29,6 +39,7 @@ function Patients() {
         setError("");
 
         const data = await getPatients();
+
         setPatients(data);
       } catch (error) {
         console.error("Failed to load patients:", error);
@@ -66,15 +77,18 @@ function Patients() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (data: CreatePatientInput) => {
+  const handleSubmit = async (
+    data: CreatePatientInput,
+  ) => {
     try {
       setError("");
 
       if (editingPatient) {
-        const updatedPatient = await updatePatient(
-          editingPatient.id,
-          data,
-        );
+        const updatedPatient =
+          await updatePatient(
+            editingPatient.id,
+            data,
+          );
 
         setPatients((currentPatients) =>
           currentPatients.map((patient) =>
@@ -83,21 +97,36 @@ function Patients() {
               : patient,
           ),
         );
+
+        setIsModalOpen(false);
+        setEditingPatient(undefined);
+
+        await showSuccess(
+          "Patient information updated successfully.",
+        );
       } else {
-        const newPatient = await createPatient(data);
+        const newPatient =
+          await createPatient(data);
 
         setPatients((currentPatients) => [
           newPatient,
           ...currentPatients,
         ]);
+
+        setIsModalOpen(false);
+        setEditingPatient(undefined);
+
+        await showSuccess(
+          "Patient added successfully.",
+        );
       }
-
-      setIsModalOpen(false);
-      setEditingPatient(undefined);
     } catch (error) {
-      console.error("Failed to save patient:", error);
+      console.error(
+        "Failed to save patient:",
+        error,
+      );
 
-      setError(
+      await showError(
         error instanceof Error
           ? error.message
           : "Failed to save patient.",
@@ -105,10 +134,13 @@ function Patients() {
     }
   };
 
-  const handleDeletePatient = async (patient: Patient) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${patient.name}?`,
-    );
+  const handleDeletePatient = async (
+    patient: Patient,
+  ) => {
+    const confirmed =
+      await showDeleteConfirmation(
+        `Are you sure you want to delete ${patient.name}? This action cannot be undone.`,
+      );
 
     if (!confirmed) {
       return;
@@ -121,13 +153,21 @@ function Patients() {
 
       setPatients((currentPatients) =>
         currentPatients.filter(
-          (currentPatient) => currentPatient.id !== patient.id,
+          (currentPatient) =>
+            currentPatient.id !== patient.id,
         ),
       );
-    } catch (error) {
-      console.error("Failed to delete patient:", error);
 
-      setError(
+      await showSuccess(
+        "Patient deleted successfully.",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete patient:",
+        error,
+      );
+
+      await showError(
         error instanceof Error
           ? error.message
           : "Failed to delete patient.",
@@ -137,6 +177,7 @@ function Patients() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -157,22 +198,27 @@ function Patients() {
         </button>
       </div>
 
+      {/* Initial page-load error */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
+      {/* Search */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <input
           type="text"
           placeholder="Search by name, patient ID, or phone..."
           value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
+          onChange={(event) =>
+            setSearchTerm(event.target.value)
+          }
           className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
       </div>
 
+      {/* Patient table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         {isLoading ? (
           <div className="p-8 text-center text-sm text-gray-500">
@@ -215,7 +261,10 @@ function Patients() {
 
               <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-gray-50">
+                  <tr
+                    key={patient.id}
+                    className="hover:bg-gray-50"
+                  >
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-blue-600">
                       {patient.patientId}
                     </td>
@@ -233,7 +282,7 @@ function Patients() {
                     </td>
 
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                      {patient.phone}
+                      {patient.phone || "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
@@ -241,7 +290,9 @@ function Patients() {
                         <button
                           type="button"
                           onClick={() =>
-                            navigate(`/patients/${patient.id}`)
+                            navigate(
+                              `/patients/${patient.id}`,
+                            )
                           }
                           className="rounded-md px-3 py-1.5 text-blue-600 hover:bg-blue-50"
                         >
@@ -250,7 +301,11 @@ function Patients() {
 
                         <button
                           type="button"
-                          onClick={() => handleEditPatient(patient)}
+                          onClick={() =>
+                            handleEditPatient(
+                              patient,
+                            )
+                          }
                           className="rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-100"
                         >
                           Edit
@@ -258,7 +313,11 @@ function Patients() {
 
                         <button
                           type="button"
-                          onClick={() => handleDeletePatient(patient)}
+                          onClick={() =>
+                            handleDeletePatient(
+                              patient,
+                            )
+                          }
                           className="rounded-md px-3 py-1.5 text-red-600 hover:bg-red-50"
                         >
                           Delete
@@ -273,6 +332,7 @@ function Patients() {
         )}
       </div>
 
+      {/* Patient modal */}
       {isModalOpen && (
         <PatientForm
           initialData={editingPatient}
