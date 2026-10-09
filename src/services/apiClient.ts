@@ -62,33 +62,22 @@ const getFreshAccessToken = async (): Promise<string> => {
  * Name: Patient name must be at least 2 characters long.
  * Age: Age cannot be negative.
  */
-const getApiErrorMessage = (
-  responseData: ApiResponse<unknown>,
-): string => {
-  if (
-    responseData.errors &&
-    responseData.errors.length > 0
-  ) {
-    const validationMessages =
-      responseData.errors
-        .map((error) => {
-          const fieldName = error.field
-            ? error.field
-            : "Field";
+const getApiErrorMessage = (responseData: ApiResponse<unknown>): string => {
+  if (responseData.errors && responseData.errors.length > 0) {
+    const validationMessages = responseData.errors
+      .map((error) => {
+        const fieldName = error.field ? error.field : "Field";
 
-          return `${fieldName}: ${error.message}`;
-        })
-        .join("\n");
+        return `${fieldName}: ${error.message}`;
+      })
+      .join("\n");
 
     return `${
       responseData.message || "Validation failed."
     }\n${validationMessages}`;
   }
 
-  return (
-    responseData.message ||
-    "API request failed."
-  );
+  return responseData.message || "API request failed.";
 };
 
 export interface ApiRequestOptions extends RequestInit {
@@ -99,44 +88,32 @@ export const apiRequest = async <T>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<T> => {
-  const {
-    requiresAuth = true,
-    ...fetchOptions
-  } = options;
+  const { requiresAuth = true, ...fetchOptions } = options;
 
-  const makeRequest = async (
-    token: string | null,
-  ): Promise<Response> => {
-    const headers = new Headers(
-      fetchOptions.headers,
-    );
+  const makeRequest = async (token: string | null): Promise<Response> => {
+    const headers = new Headers(fetchOptions.headers);
 
-    if (
-      fetchOptions.body &&
-      !headers.has("Content-Type")
-    ) {
-      headers.set(
-        "Content-Type",
-        "application/json",
-      );
+    if (fetchOptions.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
     }
 
     if (requiresAuth && token) {
-      headers.set(
-        "Authorization",
-        `Bearer ${token}`,
-      );
+      headers.set("Authorization", `Bearer ${token}`);
     }
 
-    return fetch(
-      `${API_BASE_URL}${endpoint}`,
-      {
-        ...fetchOptions,
-        headers,
-        credentials: "include",
-      },
-    );
+    return fetch(`${API_BASE_URL}${endpoint}`, {
+      ...fetchOptions,
+      headers,
+      credentials: "include",
+    });
   };
+
+  console.log(
+    "[apiClient] Request:",
+    endpoint,
+    "has access token:",
+    Boolean(accessToken),
+  );
 
   let response = await makeRequest(accessToken);
 
@@ -144,21 +121,21 @@ export const apiRequest = async <T>(
    * If the access token expired, try to refresh it
    * and retry the original request once.
    */
-  if (
-    requiresAuth &&
-    response.status === 401
-  ) {
+  if (requiresAuth && response.status === 401) {
     try {
       const newToken =
-        await getFreshAccessToken();
+  await getFreshAccessToken();
+
+console.log(
+  "[apiClient] Token refreshed:",
+  Boolean(newToken),
+);
 
       response = await makeRequest(newToken);
     } catch {
       clearAccessToken();
 
-      throw new Error(
-        "Authentication session expired.",
-      );
+      throw new Error("Authentication session expired.");
     }
   }
 
@@ -169,8 +146,7 @@ export const apiRequest = async <T>(
     let message = "API request failed.";
 
     try {
-      const errorData =
-        (await response.json()) as ApiResponse<unknown>;
+      const errorData = (await response.json()) as ApiResponse<unknown>;
 
       message = getApiErrorMessage(errorData);
     } catch {
@@ -188,13 +164,10 @@ export const apiRequest = async <T>(
     return undefined as T;
   }
 
-  const result =
-    (await response.json()) as ApiResponse<T>;
+  const result = (await response.json()) as ApiResponse<T>;
 
   if (!result.success) {
-    throw new Error(
-      getApiErrorMessage(result),
-    );
+    throw new Error(getApiErrorMessage(result));
   }
 
   return result.data as T;

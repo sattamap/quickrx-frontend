@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
+
 import { getVisitById } from "../services/visitApi.ts";
+
 import {
   createPrescription,
   getPrescriptionByVisitId,
@@ -10,7 +13,9 @@ import {
 } from "../services/prescriptionApi.ts";
 
 import type { Patient } from "../types/patient.ts";
+
 import type { Visit } from "../types/visit.ts";
+
 import type {
   Prescription,
   PrescriptionMedicine,
@@ -18,6 +23,15 @@ import type {
 } from "../types/prescription.ts";
 
 import { getPrescriptionSettings } from "../services/prescriptionSettingsApi.ts";
+
+import {
+  createInvestigation,
+  getPatientInvestigations,
+  updateInvestigation,
+  cancelInvestigation,
+  type Investigation,
+  type InvestigationEye,
+} from "../services/investigationApi.ts";
 
 import { searchMedicines, type Medicine } from "../utils/medicineData.ts";
 
@@ -35,12 +49,14 @@ const emptySpectaclePrescription: SpectaclePrescription = {
     axis: "",
     visualAcuity: "",
   },
+
   left: {
     sph: "",
     cyl: "",
     axis: "",
     visualAcuity: "",
   },
+
   nearAddition: "",
   pd: "",
 };
@@ -65,7 +81,9 @@ const emptyMedicineForm: MedicineForm = {
   instructions: "",
 };
 
-type MedicineChangeEvent = ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+type MedicineChangeEvent = ChangeEvent<
+  HTMLInputElement | HTMLSelectElement
+>;
 
 function PrescriptionBuilder() {
   const navigate = useNavigate();
@@ -76,13 +94,16 @@ function PrescriptionBuilder() {
   }>();
 
   const [patient, setPatient] = useState<Patient | null>(null);
+
   const [visit, setVisit] = useState<Visit | null>(null);
 
   const [existingPrescription, setExistingPrescription] =
     useState<Prescription | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+
   const [isSaving, setIsSaving] = useState(false);
+
   const [loadError, setLoadError] = useState("");
 
   const [medicines, setMedicines] = useState<PrescriptionMedicine[]>([]);
@@ -98,10 +119,35 @@ function PrescriptionBuilder() {
     useState<SpectaclePrescription>(emptySpectaclePrescription);
 
   const [advice, setAdvice] = useState("");
+
   const [followUp, setFollowUp] = useState("");
 
+  interface InvestigationDraft {
+    localId: string;
+    investigationId?: string;
+    testName: string;
+    eye: InvestigationEye;
+    status?: Investigation["status"];
+    result?: string;
+    testDate?: string;
+  }
+
+  const [investigations, setInvestigations] = useState<
+    InvestigationDraft[]
+  >([]);
+
+  const [originalInvestigationIds, setOriginalInvestigationIds] =
+    useState<string[]>([]);
+
+  const [investigationTestName, setInvestigationTestName] =
+    useState("");
+
+  const [investigationEye, setInvestigationEye] =
+    useState<InvestigationEye>("OU");
+
   /*
-   * Load patient, visit, and existing prescription.
+   * Load patient, visit, existing prescription,
+   * prescription settings, and investigations.
    */
   useEffect(() => {
     const loadData = async () => {
@@ -115,20 +161,62 @@ function PrescriptionBuilder() {
         setIsLoading(true);
         setLoadError("");
 
-        const [patientData, visitData, prescriptionData, prescriptionSettings] =
-          await Promise.all([
-            getPatientById(patientId),
-            getVisitById(visitId),
-            getPrescriptionByVisitId(visitId),
-            getPrescriptionSettings(),
-          ]);
+        const [
+          patientData,
+          visitData,
+          prescriptionData,
+          prescriptionSettings,
+          investigationData,
+        ] = await Promise.all([
+          getPatientById(patientId),
+          getVisitById(visitId),
+          getPrescriptionByVisitId(visitId),
+          getPrescriptionSettings(),
+          getPatientInvestigations(patientId),
+        ]);
 
+        /*
+         * Verify that the requested visit belongs
+         * to the requested patient.
+         */
         if (visitData.patientId !== patientData.id) {
-          throw new Error("This visit does not belong to this patient.");
+          throw new Error(
+            "This visit does not belong to this patient.",
+          );
         }
 
+        /*
+         * Only investigations ordered from this visit
+         * belong in this Prescription Builder.
+         */
+        const visitInvestigations = investigationData.filter(
+          (investigation) =>
+            investigation.orderedVisitId === visitId &&
+            investigation.status !== "cancelled",
+        );
+
+        setInvestigations(
+          visitInvestigations.map((investigation) => ({
+            localId: investigation._id,
+            investigationId: investigation._id,
+            testName: investigation.testName,
+            eye: investigation.eye,
+            status: investigation.status,
+            result: investigation.result,
+            testDate: investigation.testDate,
+          })),
+        );
+
+        setOriginalInvestigationIds(
+          visitInvestigations.map(
+            (investigation) => investigation._id,
+          ),
+        );
+
         setPatient(patientData);
+
         setVisit(visitData);
+
         setExistingPrescription(prescriptionData);
 
         /*
@@ -137,9 +225,12 @@ function PrescriptionBuilder() {
         if (prescriptionData) {
           setMedicines(prescriptionData.medicines);
 
-          setSpectaclePrescription(prescriptionData.spectaclePrescription);
+          setSpectaclePrescription(
+            prescriptionData.spectaclePrescription,
+          );
 
           setAdvice(prescriptionData.advice);
+
           setFollowUp(prescriptionData.followUp);
         } else {
           setMedicines([]);
@@ -151,21 +242,27 @@ function PrescriptionBuilder() {
               axis: "",
               visualAcuity: "",
             },
+
             left: {
               sph: "",
               cyl: "",
               axis: "",
               visualAcuity: "",
             },
+
             nearAddition: "",
             pd: "",
           });
 
           setAdvice(prescriptionSettings.defaultAdvice);
+
           setFollowUp(prescriptionSettings.defaultFollowUp);
         }
       } catch (error) {
-        console.error("Failed to load prescription builder data:", error);
+        console.error(
+          "Failed to load prescription builder data:",
+          error,
+        );
 
         setLoadError(
           error instanceof Error
@@ -190,9 +287,6 @@ function PrescriptionBuilder() {
    *
    * 2. React onChange:
    *    onChange={handleMedicineFormChange}
-   *
-   * This allows the same handler to work with
-   * both input and select elements.
    */
   const handleMedicineFormChange = (
     fieldOrEvent: keyof MedicineForm | MedicineChangeEvent,
@@ -207,7 +301,8 @@ function PrescriptionBuilder() {
       return;
     }
 
-    const { name, value: eventValue } = fieldOrEvent.target;
+    const { name, value: eventValue } =
+      fieldOrEvent.target;
 
     if (
       name !== "name" &&
@@ -230,7 +325,10 @@ function PrescriptionBuilder() {
   /*
    * Search the real medicine database.
    */
-  const filteredMedicineSuggestions = searchMedicines(medicineForm.name, 20);
+  const filteredMedicineSuggestions = searchMedicines(
+    medicineForm.name,
+    20,
+  );
 
   /*
    * Select medicine from medicine database.
@@ -246,7 +344,9 @@ function PrescriptionBuilder() {
    * - Duration
    * - Instructions
    */
-  const handleSelectMedicineSuggestion = (medicine: Medicine) => {
+  const handleSelectMedicineSuggestion = (
+    medicine: Medicine,
+  ) => {
     setMedicineForm((current) => ({
       ...current,
       name: medicine.name,
@@ -260,9 +360,12 @@ function PrescriptionBuilder() {
     }, 0);
   };
 
-  const handleAddMedicine =async  () => {
+  const handleAddMedicine = async () => {
     if (!medicineForm.name.trim()) {
-      await showWarning("Please enter or select a medicine name.");
+      await showWarning(
+        "Please enter or select a medicine name.",
+      );
+
       return;
     }
 
@@ -280,11 +383,14 @@ function PrescriptionBuilder() {
     setMedicines((current) => [...current, medicine]);
 
     setMedicineForm(emptyMedicineForm);
+
     setShowSuggestions(false);
   };
 
   const handleRemoveMedicine = async (id: string) => {
-    const medicine = medicines.find((item) => item.id === id);
+    const medicine = medicines.find(
+      (item) => item.id === id,
+    );
 
     const confirmed = await showDeleteConfirmation(
       medicine
@@ -296,14 +402,20 @@ function PrescriptionBuilder() {
       return;
     }
 
-    setMedicines((current) => current.filter((item) => item.id !== id));
+    setMedicines((current) =>
+      current.filter((item) => item.id !== id),
+    );
   };
 
   /*
    * Spectacle prescription handler.
    */
   const handleSpectacleChange = (
-    section: "right" | "left" | "nearAddition" | "pd",
+    section:
+      | "right"
+      | "left"
+      | "nearAddition"
+      | "pd",
     field: keyof SpectaclePrescription["right"] | null,
     value: string,
   ) => {
@@ -315,6 +427,7 @@ function PrescriptionBuilder() {
 
         return {
           ...current,
+
           [section]: {
             ...current[section],
             [field]: value,
@@ -330,26 +443,121 @@ function PrescriptionBuilder() {
   };
 
   /*
+   * Add a new investigation to the current prescription.
+   *
+   * This is only a local draft at this stage.
+   * The investigation is created in MongoDB when
+   * the prescription is saved.
+   */
+  const handleAddInvestigation = async () => {
+    const testName = investigationTestName.trim();
+
+    if (!testName) {
+      await showWarning(
+        "Please enter an investigation/test name.",
+      );
+
+      return;
+    }
+
+    const alreadyExists = investigations.some(
+      (investigation) =>
+        investigation.testName.toLowerCase() ===
+          testName.toLowerCase() &&
+        investigation.eye === investigationEye &&
+        investigation.status !== "cancelled",
+    );
+
+    if (alreadyExists) {
+      await showWarning(
+        "This investigation has already been added for this eye.",
+      );
+
+      return;
+    }
+
+    setInvestigations((current) => [
+      ...current,
+      {
+        localId: crypto.randomUUID(),
+        testName,
+        eye: investigationEye,
+        status: "ordered",
+      },
+    ]);
+
+    setInvestigationTestName("");
+
+    setInvestigationEye("OU");
+  };
+
+  /*
+   * Remove an investigation from the current prescription.
+   *
+   * Completed/reviewed investigations cannot be removed
+   * from this builder.
+   */
+  const handleRemoveInvestigation = async (
+    investigation: InvestigationDraft,
+  ) => {
+    if (
+      investigation.status === "completed" ||
+      investigation.status === "reviewed"
+    ) {
+      await showWarning(
+        "Completed or reviewed investigations cannot be removed here.",
+      );
+
+      return;
+    }
+
+    const confirmed = await showDeleteConfirmation(
+      `Remove "${investigation.testName}" from the advised investigations?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setInvestigations((current) =>
+      current.filter(
+        (item) => item.localId !== investigation.localId,
+      ),
+    );
+  };
+
+  /*
    * Save / update prescription.
    */
   const handleSavePrescription = async () => {
     if (!patient || !visit) {
-      await showError("Patient or visit information is missing.");
+      await showError(
+        "Patient or visit information is missing.",
+      );
+
       return;
     }
 
     try {
       setIsSaving(true);
+
       setLoadError("");
 
       const prescriptionData = {
         patientId: patient.id,
+
         visitId: visit.id,
+
         prescriptionDate:
-          existingPrescription?.prescriptionDate ?? new Date().toISOString(),
+          existingPrescription?.prescriptionDate ??
+          new Date().toISOString(),
+
         medicines,
+
         spectaclePrescription,
+
         advice: advice.trim(),
+
         followUp: followUp.trim(),
       };
 
@@ -361,8 +569,162 @@ function PrescriptionBuilder() {
           prescriptionData,
         );
       } else {
-        savedPrescription = await createPrescription(prescriptionData);
+        savedPrescription = await createPrescription(
+          prescriptionData,
+        );
       }
+
+      /*
+       * Synchronize investigations for this visit.
+       *
+       * New investigations are created.
+       * Existing investigations are updated.
+       * Removed investigations are cancelled.
+       */
+
+      const currentInvestigationIds = investigations
+        .map(
+          (investigation) =>
+            investigation.investigationId,
+        )
+        .filter(
+          (id): id is string => Boolean(id),
+        );
+
+      const removedInvestigationIds =
+        originalInvestigationIds.filter(
+          (id) =>
+            !currentInvestigationIds.includes(id),
+        );
+
+      /*
+       * Cancel investigations removed from the builder.
+       */
+      await Promise.all(
+        removedInvestigationIds.map(
+          (investigationId) =>
+            cancelInvestigation(investigationId),
+        ),
+      );
+
+      /*
+       * Create/update current investigations.
+       *
+       * IMPORTANT:
+       *
+       * Newly-created investigations are returned from
+       * the API and their MongoDB IDs are stored in the
+       * local state.
+       *
+       * This prevents duplicate investigation creation
+       * when the prescription is saved again.
+       */
+      const savedInvestigations =
+        await Promise.all(
+          investigations.map(
+            async (investigation) => {
+              /*
+               * Existing investigation.
+               */
+              if (investigation.investigationId) {
+                /*
+                 * Completed/reviewed investigations
+                 * should remain untouched.
+                 */
+                if (
+                  investigation.status ===
+                    "completed" ||
+                  investigation.status ===
+                    "reviewed"
+                ) {
+                  return investigation;
+                }
+
+                const updatedInvestigation =
+                  await updateInvestigation(
+                    investigation.investigationId,
+                    {
+                      testName:
+                        investigation.testName.trim(),
+                      eye: investigation.eye,
+                    },
+                  );
+
+                return {
+                  ...investigation,
+                  testName:
+                    updatedInvestigation.testName,
+                  eye: updatedInvestigation.eye,
+                  status:
+                    updatedInvestigation.status,
+                };
+              }
+
+              /*
+               * New investigation.
+               */
+              const createdInvestigation =
+                await createInvestigation({
+                  patientId: patient.id,
+
+                  orderedVisitId: visit.id,
+
+                  testName:
+                    investigation.testName.trim(),
+
+                  eye: investigation.eye,
+
+                  orderedDate: visit.visitDate,
+
+                  result: "",
+
+                  notes: "",
+
+                  status: "ordered",
+                });
+
+              /*
+               * Store the real MongoDB investigation ID
+               * in the local state.
+               */
+              return {
+                ...investigation,
+
+                localId:
+                  createdInvestigation._id,
+
+                investigationId:
+                  createdInvestigation._id,
+
+                status:
+                  createdInvestigation.status,
+
+                result:
+                  createdInvestigation.result,
+
+                testDate:
+                  createdInvestigation.testDate,
+              };
+            },
+          ),
+        );
+
+      /*
+       * Keep the investigation state synchronized with
+       * the database after saving.
+       */
+      setInvestigations(savedInvestigations);
+
+      setOriginalInvestigationIds(
+        savedInvestigations
+          .map(
+            (investigation) =>
+              investigation.investigationId,
+          )
+          .filter(
+            (id): id is string => Boolean(id),
+          ),
+      );
 
       setExistingPrescription(savedPrescription);
 
@@ -376,34 +738,43 @@ function PrescriptionBuilder() {
         `/patients/${patient.id}/visits/${visit.id}/prescription/preview`,
       );
     } catch (error) {
-      console.error("Failed to save prescription:", error);
+      console.error(
+        "Failed to save prescription:",
+        error,
+      );
 
-      await showError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to save prescription. Please try again.",
-      );
+          : "Failed to save prescription.";
+
+      setLoadError(message);
+
+      await showError(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleCancel = () => {
+  /*
+   * Navigate back to the visit details page.
+   */
+  const handleBack = () => {
     if (!patient || !visit) {
-      navigate("/patients");
+      navigate(-1);
       return;
     }
 
-    navigate(`/patients/${patient.id}/visits/${visit.id}`);
+    navigate(
+      `/patients/${patient.id}/visits/${visit.id}`,
+    );
   };
 
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-
-          <p className="text-sm text-gray-500">Loading prescription...</p>
+        <div className="text-sm text-slate-500">
+          Loading prescription builder...
         </div>
       </div>
     );
@@ -411,20 +782,24 @@ function PrescriptionBuilder() {
 
   if (loadError && (!patient || !visit)) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-        <h2 className="text-lg font-semibold text-red-800">
-          Unable to load prescription
-        </h2>
+      <div className="mx-auto max-w-3xl p-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <h2 className="text-sm font-semibold text-red-700">
+            Unable to load prescription
+          </h2>
 
-        <p className="mt-2 text-sm text-red-700">{loadError}</p>
+          <p className="mt-1 whitespace-pre-line text-sm text-red-600">
+            {loadError}
+          </p>
 
-        <button
-          type="button"
-          onClick={() => navigate("/patients")}
-          className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        >
-          Back to Patients
-        </button>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="mt-4 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -434,102 +809,127 @@ function PrescriptionBuilder() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="mb-2 text-sm text-blue-600 hover:text-blue-800"
-          >
-            ← Back to Visit
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              ← Back
+            </button>
 
-          <h1 className="text-2xl font-bold text-gray-900">
-            {existingPrescription ? "Edit Prescription" : "New Prescription"}
-          </h1>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                Prescription Builder
+              </h1>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Create prescription for {patient.name}
-          </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Create prescription for {patient.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+            <span>
+              Patient ID:{" "}
+              <span className="font-medium text-slate-900">
+                {patient.patientId}
+              </span>
+            </span>
+
+            <span>
+              Visit Date:{" "}
+              <span className="font-medium text-slate-900">
+                {visit.visitDate}
+              </span>
+            </span>
+
+            {existingPrescription && (
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                Existing prescription
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSavePrescription}
-            disabled={isSaving}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? "Saving..." : "Save Prescription"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleSavePrescription}
+          disabled={isSaving}
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSaving
+            ? "Saving..."
+            : existingPrescription
+              ? "Update Prescription"
+              : "Save Prescription"}
+        </button>
       </div>
 
-      {/* Error */}
       {loadError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {loadError}
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="whitespace-pre-line text-sm text-red-600">
+            {loadError}
+          </p>
         </div>
       )}
 
-      {/* Patient / Visit Information */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-          Patient & Visit Information
-        </h2>
+      <div className="space-y-6">
+        {/* Patient / Visit Summary */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">
+            Patient & Visit
+          </h2>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Patient ID
-            </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Patient
+              </p>
 
-            <p className="mt-1 font-medium text-gray-900">
-              {patient.patientId}
-            </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {patient.name}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Age
+              </p>
+
+              <p className="mt-1 text-sm text-slate-700">
+                {patient.age}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Gender
+              </p>
+
+              <p className="mt-1 text-sm capitalize text-slate-700">
+                {patient.gender}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Visit Date
+              </p>
+
+              <p className="mt-1 text-sm text-slate-700">
+                {visit.visitDate}
+              </p>
+            </div>
           </div>
+        </section>
 
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Patient Name
-            </p>
-
-            <p className="mt-1 font-medium text-gray-900">{patient.name}</p>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">Age</p>
-
-            <p className="mt-1 font-medium text-gray-900">
-              {visit.ageAtVisit} years
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Visit Date
-            </p>
-
-            <p className="mt-1 font-medium text-gray-900">
-              {new Date(visit.visitDate).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Medicines */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        {/* Medicines */}
+         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h2 className="text-lg font-semibold text-gray-900">Medicines</h2>
 
@@ -889,259 +1289,551 @@ function PrescriptionBuilder() {
         )}
       </section>
 
-      {/* Spectacle Prescription */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Spectacle Prescription
+
+        {/* Spectacle Prescription */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              Spectacle Prescription
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Enter the spectacle prescription for both eyes.
+            </p>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="border border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Eye
+                  </th>
+
+                  <th className="border border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    SPH
+                  </th>
+
+                  <th className="border border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    CYL
+                  </th>
+
+                  <th className="border border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Axis
+                  </th>
+
+                  <th className="border border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Visual Acuity
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td className="border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-900">
+                    Right (OD)
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.right.sph
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "right",
+                          "sph",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="SPH"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.right.cyl
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "right",
+                          "cyl",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="CYL"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.right.axis
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "right",
+                          "axis",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Axis"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.right
+                          .visualAcuity
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "right",
+                          "visualAcuity",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="6/6"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+                </tr>
+
+                <tr>
+                  <td className="border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-900">
+                    Left (OS)
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.left.sph
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "left",
+                          "sph",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="SPH"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.left.cyl
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "left",
+                          "cyl",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="CYL"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.left.axis
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "left",
+                          "axis",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Axis"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+
+                  <td className="border border-slate-200 p-2">
+                    <input
+                      type="text"
+                      value={
+                        spectaclePrescription.left
+                          .visualAcuity
+                      }
+                      onChange={(event) =>
+                        handleSpectacleChange(
+                          "left",
+                          "visualAcuity",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="6/6"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="near-addition"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Near Addition
+              </label>
+
+              <input
+                id="near-addition"
+                type="text"
+                value={
+                  spectaclePrescription.nearAddition
+                }
+                onChange={(event) =>
+                  handleSpectacleChange(
+                    "nearAddition",
+                    null,
+                    event.target.value,
+                  )
+                }
+                placeholder="e.g. +2.00"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="pd"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                PD
+              </label>
+
+              <input
+                id="pd"
+                type="text"
+                value={spectaclePrescription.pd}
+                onChange={(event) =>
+                  handleSpectacleChange(
+                    "pd",
+                    null,
+                    event.target.value,
+                  )
+                }
+                placeholder="e.g. 62 mm"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Investigations */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Investigations Advised
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add investigations or tests advised during
+                this visit.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+              {investigations.length} test
+              {investigations.length === 1
+                ? ""
+                : "s"}
+            </span>
+          </div>
+
+          {/* Add Investigation */}
+          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="investigation-test-name"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Investigation / Test
+                </label>
+
+                <input
+                  id="investigation-test-name"
+                  type="text"
+                  value={investigationTestName}
+                  onChange={(event) =>
+                    setInvestigationTestName(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="e.g. OCT RNFL, Visual Field, B-scan"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="investigation-eye"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Eye
+                </label>
+
+                <select
+                  id="investigation-eye"
+                  value={investigationEye}
+                  onChange={(event) =>
+                    setInvestigationEye(
+                      event.target
+                        .value as InvestigationEye,
+                    )
+                  }
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="OD">
+                    OD — Right Eye
+                  </option>
+
+                  <option value="OS">
+                    OS — Left Eye
+                  </option>
+
+                  <option value="OU">
+                    OU — Both Eyes
+                  </option>
+
+                  <option value="NA">
+                    N/A
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleAddInvestigation}
+                className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              >
+                + Add Investigation
+              </button>
+            </div>
+          </div>
+
+          {/* Investigation List */}
+          {investigations.length > 0 ? (
+            <div className="mt-5 overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Investigation
+                    </th>
+
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Eye
+                    </th>
+
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Status
+                    </th>
+
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Result
+                    </th>
+
+                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Test Date
+                    </th>
+
+                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {investigations.map(
+                    (investigation) => (
+                      <tr
+                        key={investigation.localId}
+                      >
+                        <td className="px-3 py-3 text-sm font-medium text-slate-900">
+                          {investigation.testName}
+                        </td>
+
+                        <td className="px-3 py-3 text-sm text-slate-600">
+                          {investigation.eye}
+                        </td>
+
+                        <td className="px-3 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                              investigation.status ===
+                              "reviewed"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : investigation.status ===
+                                    "completed"
+                                  ? "bg-blue-50 text-blue-700"
+                                  : investigation.status ===
+                                      "cancelled"
+                                    ? "bg-red-50 text-red-700"
+                                    : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {investigation.status ===
+                            "reviewed"
+                              ? "Reviewed"
+                              : investigation.status ===
+                                  "completed"
+                                ? "Completed"
+                                : investigation.status ===
+                                    "cancelled"
+                                  ? "Cancelled"
+                                  : "Ordered"}
+                          </span>
+                        </td>
+
+                        <td className="max-w-xs px-3 py-3 text-sm text-slate-600">
+                          {investigation.result ||
+                            "Pending"}
+                        </td>
+
+                        <td className="px-3 py-3 text-sm text-slate-600">
+                          {investigation.testDate ||
+                            "—"}
+                        </td>
+
+                        <td className="px-3 py-3 text-right">
+                          {investigation.status !==
+                            "completed" &&
+                            investigation.status !==
+                              "reviewed" && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveInvestigation(
+                                    investigation,
+                                  )
+                                }
+                                className="text-sm font-medium text-red-600 hover:text-red-700"
+                              >
+                                Remove
+                              </button>
+                            )}
+
+                          {(investigation.status ===
+                            "completed" ||
+                            investigation.status ===
+                              "reviewed") && (
+                            <span className="text-xs text-slate-400">
+                              Locked
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+              No investigations advised for this visit.
+            </div>
+          )}
+
+          <div className="mt-4 rounded-md bg-blue-50 p-3 text-xs leading-5 text-blue-700">
+            Investigations advised here will be linked to
+            this visit. Results can be entered later from a
+            subsequent visit.
+          </div>
+        </section>
+
+        {/* Advice */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">
+            Advice
           </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Enter the spectacle prescription for each eye.
+          <p className="mt-1 text-sm text-slate-500">
+            Add general advice for the patient.
           </p>
+
+          <textarea
+            value={advice}
+            onChange={(event) =>
+              setAdvice(event.target.value)
+            }
+            rows={5}
+            placeholder="Enter patient advice..."
+            className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </section>
+
+        {/* Follow-up */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">
+            Follow-up
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Enter follow-up instructions.
+          </p>
+
+          <textarea
+            value={followUp}
+            onChange={(event) =>
+              setFollowUp(event.target.value)
+            }
+            rows={3}
+            placeholder="e.g. Follow up after 4 weeks."
+            className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </section>
+
+        {/* Bottom Actions */}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSavePrescription}
+            disabled={isSaving}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving
+              ? "Saving..."
+              : existingPrescription
+                ? "Update Prescription"
+                : "Save Prescription"}
+          </button>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="px-3 py-3 text-left text-sm font-semibold text-gray-700">
-                  Eye
-                </th>
-
-                <th className="px-3 py-3 text-left text-sm font-semibold text-gray-700">
-                  SPH
-                </th>
-
-                <th className="px-3 py-3 text-left text-sm font-semibold text-gray-700">
-                  CYL
-                </th>
-
-                <th className="px-3 py-3 text-left text-sm font-semibold text-gray-700">
-                  AXIS
-                </th>
-
-                <th className="px-3 py-3 text-left text-sm font-semibold text-gray-700">
-                  Visual Acuity
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {/* Right Eye */}
-              <tr className="border-b border-gray-100">
-                <td className="px-3 py-3 font-medium text-gray-900">
-                  Right Eye
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.right.sph}
-                    onChange={(event) =>
-                      handleSpectacleChange("right", "sph", event.target.value)
-                    }
-                    placeholder="SPH"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.right.cyl}
-                    onChange={(event) =>
-                      handleSpectacleChange("right", "cyl", event.target.value)
-                    }
-                    placeholder="CYL"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.right.axis}
-                    onChange={(event) =>
-                      handleSpectacleChange("right", "axis", event.target.value)
-                    }
-                    placeholder="AXIS"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.right.visualAcuity}
-                    onChange={(event) =>
-                      handleSpectacleChange(
-                        "right",
-                        "visualAcuity",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="6/6"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-              </tr>
-
-              {/* Left Eye */}
-              <tr>
-                <td className="px-3 py-3 font-medium text-gray-900">
-                  Left Eye
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.left.sph}
-                    onChange={(event) =>
-                      handleSpectacleChange("left", "sph", event.target.value)
-                    }
-                    placeholder="SPH"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.left.cyl}
-                    onChange={(event) =>
-                      handleSpectacleChange("left", "cyl", event.target.value)
-                    }
-                    placeholder="CYL"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.left.axis}
-                    onChange={(event) =>
-                      handleSpectacleChange("left", "axis", event.target.value)
-                    }
-                    placeholder="AXIS"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-
-                <td className="px-3 py-3">
-                  <input
-                    type="text"
-                    value={spectaclePrescription.left.visualAcuity}
-                    onChange={(event) =>
-                      handleSpectacleChange(
-                        "left",
-                        "visualAcuity",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="6/6"
-                    className="w-full min-w-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Near Addition / PD */}
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="near-addition"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Near Addition
-            </label>
-
-            <input
-              id="near-addition"
-              type="text"
-              value={spectaclePrescription.nearAddition}
-              onChange={(event) =>
-                handleSpectacleChange("nearAddition", null, event.target.value)
-              }
-              placeholder="e.g. +1.50"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="pd"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              PD
-            </label>
-
-            <input
-              id="pd"
-              type="text"
-              value={spectaclePrescription.pd}
-              onChange={(event) =>
-                handleSpectacleChange("pd", null, event.target.value)
-              }
-              placeholder="e.g. 64 mm"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Advice */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Advice</h2>
-
-        <textarea
-          value={advice}
-          onChange={(event) => setAdvice(event.target.value)}
-          rows={5}
-          placeholder="Enter advice for the patient..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-      </section>
-
-      {/* Follow Up */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Follow-up</h2>
-
-        <textarea
-          value={followUp}
-          onChange={(event) => setFollowUp(event.target.value)}
-          rows={3}
-          placeholder="e.g. Follow up after 2 weeks"
-          className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-      </section>
-
-      {/* Bottom Actions */}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={isSaving}
-          className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSavePrescription}
-          disabled={isSaving}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving
-            ? "Saving..."
-            : existingPrescription
-              ? "Update Prescription"
-              : "Save Prescription"}
-        </button>
       </div>
     </div>
   );
