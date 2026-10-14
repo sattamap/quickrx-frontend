@@ -59,7 +59,7 @@ export const login = async (
   data: LoginInput,
 ): Promise<AuthResponse["data"]> => {
   const response = await fetch(
-    `${API_URL}/login`,
+    `${API_URL}/auth/login`,
     {
       method: "POST",
       headers: {
@@ -89,7 +89,7 @@ export const register = async (
   data: RegisterInput,
 ): Promise<AuthUser> => {
   const response = await fetch(
-    `${API_URL}/register`,
+    `${API_URL}/auth/register`,
     {
       method: "POST",
       headers: {
@@ -150,7 +150,7 @@ export const refreshAccessToken = async (): Promise<
   }
 
   const response = await fetch(
-    `${API_URL}/refresh`,
+    `${API_URL}/auth/refresh`,
     {
       method: "POST",
       headers: {
@@ -179,7 +179,7 @@ export const logout = async (): Promise<void> => {
   const csrfToken = getCsrfToken();
 
   const response = await fetch(
-    `${API_URL}/logout`,
+    `${API_URL}/auth/logout`,
     {
       method: "POST",
       headers: csrfToken
@@ -207,7 +207,7 @@ export const getCurrentUser = async (
   accessToken: string,
 ): Promise<AuthUser> => {
   const response = await fetch(
-    `${API_URL}/me`,
+    `${API_URL}/auth/me`,
     {
       method: "GET",
       headers: {

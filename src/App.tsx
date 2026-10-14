@@ -23,7 +23,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/auth/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           {/* Protected application routes */}
           <Route
