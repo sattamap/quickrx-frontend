@@ -532,6 +532,62 @@ function PatientDetails() {
               {patient.notes || "—"}
             </p>
           </div>
+          {/* Referred By */}
+          <div className="sm:col-span-2 lg:col-span-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Referred By
+              </h3>
+
+              {patient.referredBy &&
+              (patient.referredBy.name ||
+                patient.referredBy.designation ||
+                patient.referredBy.organization ||
+                patient.referredBy.phone) ? (
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Doctor / Person
+                    </p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {patient.referredBy.name || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Designation
+                    </p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {patient.referredBy.designation || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Hospital / Organization
+                    </p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {patient.referredBy.organization || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Contact Number
+                    </p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {patient.referredBy.phone || "—"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">
+                  No referral information recorded.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 

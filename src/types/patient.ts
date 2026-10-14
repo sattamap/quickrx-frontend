@@ -9,6 +9,14 @@ export interface Patient {
   address: string;
   allergies: string;
   notes: string;
+  // Referral information
+  referredBy?: {
+    name?: string;
+    designation?: string;
+    organization?: string;
+    phone?: string;
+  };
+
   createdAt: string;
 }
 

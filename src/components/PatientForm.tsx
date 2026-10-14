@@ -23,6 +23,12 @@ function PatientForm({
     address: initialData?.address ?? "",
     allergies: initialData?.allergies ?? "",
     notes: initialData?.notes ?? "",
+    referredBy: {
+      name: initialData?.referredBy?.name ?? "",
+      designation: initialData?.referredBy?.designation ?? "",
+      organization: initialData?.referredBy?.organization ?? "",
+      phone: initialData?.referredBy?.phone ?? "",
+    },
   });
 
   const [error, setError] = useState("");
@@ -42,6 +48,20 @@ function PatientForm({
     setError("");
   };
 
+  const handleReferralChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      referredBy: {
+        ...previous.referredBy,
+        [name]: value,
+      },
+    }));
+
+    setError("");
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -50,10 +70,25 @@ function PatientForm({
       return;
     }
 
-    if (!formData.age || formData.age < 0 || formData.age > 150) {
+    if (
+      !Number.isInteger(formData.age) ||
+      formData.age < 0 ||
+      formData.age > 150
+    ) {
       setError("Please enter a valid age.");
       return;
     }
+
+    const referredBy = {
+      name: formData.referredBy?.name?.trim() ?? "",
+      designation: formData.referredBy?.designation?.trim() ?? "",
+      organization: formData.referredBy?.organization?.trim() ?? "",
+      phone: formData.referredBy?.phone?.trim() ?? "",
+    };
+
+    const hasReferralInformation = Object.values(referredBy).some(
+      (value) => value !== "",
+    );
 
     onSubmit({
       ...formData,
@@ -62,6 +97,7 @@ function PatientForm({
       address: formData.address.trim(),
       allergies: formData.allergies.trim(),
       notes: formData.notes.trim(),
+      referredBy: hasReferralInformation ? referredBy : undefined,
     });
   };
 
@@ -206,6 +242,86 @@ function PatientForm({
             placeholder="Enter patient address"
             className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
+        </div>
+      </div>
+
+      {/* Referral Information */}
+      <div className="border-t border-gray-200 pt-6">
+        <h2 className="text-lg font-semibold text-gray-900">Referred By</h2>
+
+        <p className="mt-1 text-sm text-gray-500">
+          Record the doctor, person, or organization that referred the patient
+          to your clinic. All fields are optional.
+        </p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {/* Referring Doctor / Person */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Doctor / Person Name
+            </label>
+
+            <input
+              type="text"
+              name="name"
+              value={formData.referredBy?.name ?? ""}
+              onChange={handleReferralChange}
+              placeholder="e.g. Dr. Rahman"
+              maxLength={150}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          {/* Designation */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Designation
+            </label>
+
+            <input
+              type="text"
+              name="designation"
+              value={formData.referredBy?.designation ?? ""}
+              onChange={handleReferralChange}
+              placeholder="e.g. Consultant Ophthalmologist"
+              maxLength={100}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          {/* Organization */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Hospital / Organization
+            </label>
+
+            <input
+              type="text"
+              name="organization"
+              value={formData.referredBy?.organization ?? ""}
+              onChange={handleReferralChange}
+              placeholder="e.g. City Eye Hospital"
+              maxLength={200}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          {/* Referral Phone */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Contact Number
+            </label>
+
+            <input
+              type="tel"
+              name="phone"
+              value={formData.referredBy?.phone ?? ""}
+              onChange={handleReferralChange}
+              placeholder="Referrer's phone number"
+              maxLength={30}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
         </div>
       </div>
 
