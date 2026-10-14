@@ -59,7 +59,7 @@ export const login = async (
   data: LoginInput,
 ): Promise<AuthResponse["data"]> => {
   const response = await fetch(
-    `${API_URL}/auth/login`,
+    `${API_URL}/login`,
     {
       method: "POST",
       headers: {
