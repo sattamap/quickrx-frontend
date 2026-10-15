@@ -197,7 +197,7 @@ const Login = () => {
               href="https://sattam-portfolio.netlify.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-blue-600 hover:decoration-blue-600"
+              className="font-semibold text-slate-700  decoration-slate-300 underline-offset-4 transition hover:text-blue-600 hover:decoration-blue-600"
             >
               Sattam
             </a>
