@@ -190,6 +190,18 @@ const Login = () => {
           <p className="mt-6 text-center text-xs text-slate-400">
             QuickRx • Secure clinical workflow
           </p>
+
+          <p className="mt-2 text-center text-sm text-slate-500">
+            Developed by{" "}
+            <a
+              href="https://sattam-portfolio.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-blue-600 hover:decoration-blue-600"
+            >
+              Sattam
+            </a>
+          </p>
         </div>
       </div>
     </div>
