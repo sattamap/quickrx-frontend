@@ -1,3 +1,4 @@
+
 const API_URL = "https://quickrx-backend.onrender.com/api";
 
 export interface AuthUser {
@@ -23,16 +24,20 @@ interface MeResponse {
   data: AuthUser;
 }
 
+interface CsrfResponse {
+  success: boolean;
+  data: {
+    csrfToken: string;
+  };
+  message?: string;
+}
+
 const getErrorMessage = async (
   response: Response,
 ): Promise<string> => {
   try {
     const result = await response.json();
-
-    return (
-      result.message ||
-      "Authentication request failed."
-    );
+    return result.message || "Authentication request failed.";
   } catch {
     return "Authentication request failed.";
   }
@@ -50,35 +55,25 @@ export interface RegisterInput {
 }
 
 /**
- * Login.
- *
- * The refresh token is NOT returned to JavaScript.
- * It is stored by the backend in an HttpOnly cookie.
+ * Login. The refresh token remains in an HttpOnly cookie.
  */
 export const login = async (
   data: LoginInput,
 ): Promise<AuthResponse["data"]> => {
-  const response = await fetch(
-    `${API_URL}/auth/login`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(data),
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response),
-    );
+    throw new Error(await getErrorMessage(response));
   }
 
-  const result: AuthResponse =
-    await response.json();
-
+  const result: AuthResponse = await response.json();
   return result.data;
 };
 
@@ -88,51 +83,47 @@ export const login = async (
 export const register = async (
   data: RegisterInput,
 ): Promise<AuthUser> => {
-  const response = await fetch(
-    `${API_URL}/auth/register`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(data),
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response),
-    );
+    throw new Error(await getErrorMessage(response));
   }
 
   const result = await response.json();
-
   return result.data;
 };
 
 /**
- * Read the CSRF token from the browser cookie.
+ * Obtain a CSRF token from the backend.
  *
- * The refresh token cannot be read because it is HttpOnly.
- * The CSRF token intentionally can be read by JavaScript.
+ * The backend validates the refresh-session cookie and
+ * issues a token matching the session's stored hash.
+ * Do not read the backend cookie with document.cookie.
  */
-export const getCsrfToken = (): string | null => {
-  const cookies = document.cookie.split(";");
+const requestCsrfToken = async (): Promise<string> => {
+  const response = await fetch(`${API_URL}/auth/csrf`, {
+    method: "POST",
+    credentials: "include",
+  });
 
-  const csrfCookie = cookies.find((cookie) =>
-    cookie.trim().startsWith("quickrx-csrf="),
-  );
-
-  if (!csrfCookie) {
-    return null;
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
   }
 
-  return decodeURIComponent(
-    csrfCookie
-      .trim()
-      .substring("quickrx-csrf=".length),
-  );
+  const result: CsrfResponse = await response.json();
+
+  if (!result.data?.csrfToken) {
+    throw new Error("The server did not return a CSRF token.");
+  }
+
+  return result.data.csrfToken;
 };
 
 /**
@@ -141,34 +132,22 @@ export const getCsrfToken = (): string | null => {
 export const refreshAccessToken = async (): Promise<
   AuthResponse["data"]
 > => {
-  const csrfToken = getCsrfToken();
+  // Obtain the current CSRF token immediately before refreshing.
+  const csrfToken = await requestCsrfToken();
 
-  if (!csrfToken) {
-    throw new Error(
-      "CSRF token is missing.",
-    );
-  }
-
-  const response = await fetch(
-    `${API_URL}/auth/refresh`,
-    {
-      method: "POST",
-      headers: {
-        "X-CSRF-Token": csrfToken,
-      },
-      credentials: "include",
+  const response = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "X-CSRF-Token": csrfToken,
     },
-  );
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response),
-    );
+    throw new Error(await getErrorMessage(response));
   }
 
-  const result: AuthResponse =
-    await response.json();
-
+  const result: AuthResponse = await response.json();
   return result.data;
 };
 
@@ -176,25 +155,19 @@ export const refreshAccessToken = async (): Promise<
  * Logout.
  */
 export const logout = async (): Promise<void> => {
-  const csrfToken = getCsrfToken();
+  // Obtain a token matching the active refresh session.
+  const csrfToken = await requestCsrfToken();
 
-  const response = await fetch(
-    `${API_URL}/auth/logout`,
-    {
-      method: "POST",
-      headers: csrfToken
-        ? {
-            "X-CSRF-Token": csrfToken,
-          }
-        : undefined,
-      credentials: "include",
+  const response = await fetch(`${API_URL}/auth/logout`, {
+    method: "POST",
+    headers: {
+      "X-CSRF-Token": csrfToken,
     },
-  );
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response),
-    );
+    throw new Error(await getErrorMessage(response));
   }
 };
 
@@ -206,25 +179,18 @@ export const logout = async (): Promise<void> => {
 export const getCurrentUser = async (
   accessToken: string,
 ): Promise<AuthUser> => {
-  const response = await fetch(
-    `${API_URL}/auth/me`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
+  const response = await fetch(`${API_URL}/auth/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    throw new Error(
-      await getErrorMessage(response),
-    );
+    throw new Error(await getErrorMessage(response));
   }
 
-  const result: MeResponse =
-    await response.json();
-
+  const result: MeResponse = await response.json();
   return result.data;
 };
