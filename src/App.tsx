@@ -24,7 +24,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/auth/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/auth/register" element={<Register />} />
           {/* Protected application routes */}
           <Route
             element={
