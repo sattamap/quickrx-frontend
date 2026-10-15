@@ -13,7 +13,7 @@ interface LoginLocationState {
 }
 
 const Login = () => {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, user, isAuthenticated, isLoading } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +31,9 @@ const Login = () => {
    * don't show the login page.
    */
   if (!isLoading && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} replace />
+    );
   }
 
   const locationState = location.state as LoginLocationState | null;
@@ -43,7 +45,7 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      await login({
+      const authenticatedUser = await login({
         email: email.trim(),
         password,
       });
@@ -51,11 +53,23 @@ const Login = () => {
       const from = locationState?.from;
 
       if (from?.pathname) {
-        navigate(`${from.pathname}${from.search ?? ""}${from.hash ?? ""}`, {
-          replace: true,
-        });
+        const requestedAdminPage = from.pathname.startsWith("/admin");
+
+        if (
+          (authenticatedUser.role === "admin" && requestedAdminPage) ||
+          (authenticatedUser.role === "doctor" && !requestedAdminPage)
+        ) {
+          navigate(`${from.pathname}${from.search ?? ""}${from.hash ?? ""}`, {
+            replace: true,
+          });
+        } else {
+          navigate(
+            authenticatedUser.role === "admin" ? "/admin" : "/dashboard",
+            { replace: true },
+          );
+        }
       } else {
-        navigate("/dashboard", {
+        navigate(authenticatedUser.role === "admin" ? "/admin" : "/dashboard", {
           replace: true,
         });
       }

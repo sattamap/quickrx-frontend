@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import {
   getCurrentUser,
@@ -26,72 +21,58 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider = ({
-  children,
-}: AuthProviderProps) => {
-  const [user, setUser] =
-    useState<AuthUser | null>(null);
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const initializeAuth = useCallback(
-    async () => {
-      try {
-        const existingAccessToken =
-          getAccessToken();
+  const initializeAuth = useCallback(async () => {
+    try {
+      const existingAccessToken = getAccessToken();
 
-        /*
-         * If an access token already exists in memory,
-         * try to use it first.
-         */
-        if (existingAccessToken) {
-          try {
-            const currentUser =
-              await getCurrentUser(
-                existingAccessToken,
-              );
+      /*
+       * If an access token already exists in memory,
+       * try to use it first.
+       */
+      if (existingAccessToken) {
+        try {
+          const currentUser = await getCurrentUser(existingAccessToken);
 
-            setUser(currentUser);
+          setUser(currentUser);
 
-            return;
-          } catch {
-            /*
-             * Access token may have expired.
-             * Clear it and attempt refresh.
-             */
-            clearAccessToken();
-          }
+          return;
+        } catch {
+          /*
+           * Access token may have expired.
+           * Clear it and attempt refresh.
+           */
+          clearAccessToken();
         }
-
-        /*
-         * No usable access token.
-         *
-         * Ask the backend to issue a new access token
-         * using the HttpOnly refresh cookie.
-         */
-        const result =
-          await refreshAccessToken();
-
-        setAccessToken(
-          result.accessToken,
-        );
-
-        setUser(result.user);
-      } catch {
-        /*
-         * No valid authentication session.
-         *
-         * This is normal for a new/unauthenticated user.
-         */
-        clearAccessToken();
-        setUser(null);
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [],
-  );
+
+      /*
+       * No usable access token.
+       *
+       * Ask the backend to issue a new access token
+       * using the HttpOnly refresh cookie.
+       */
+      const result = await refreshAccessToken();
+
+      setAccessToken(result.accessToken);
+
+      setUser(result.user);
+    } catch {
+      /*
+       * No valid authentication session.
+       *
+       * This is normal for a new/unauthenticated user.
+       */
+      clearAccessToken();
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     /*
@@ -111,22 +92,14 @@ export const AuthProvider = ({
     };
   }, [initializeAuth]);
 
-  const login = useCallback(
-    async (data: LoginInput) => {
-      const result =
-        await loginApi(data);
+  const login = useCallback(async (data: LoginInput): Promise<AuthUser> => {
+    const result = await loginApi(data);
 
-      /*
-       * Access token is stored ONLY in memory.
-       */
-      setAccessToken(
-        result.accessToken,
-      );
+    setAccessToken(result.accessToken);
+    setUser(result.user);
 
-      setUser(result.user);
-    },
-    [],
-  );
+    return result.user;
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -148,9 +121,5 @@ export const AuthProvider = ({
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
