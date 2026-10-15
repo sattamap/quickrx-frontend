@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -19,12 +21,23 @@ const filters: Array<{
 ];
 
 const AdminDashboard = () => {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState<AdminDoctor[]>([]);
   const [filter, setFilter] = useState<DoctorApprovalStatus | "all">("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [busyDoctorId, setBusyDoctorId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const loadDoctors = useCallback(async () => {
     try {
@@ -126,16 +139,34 @@ const AdminDashboard = () => {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-            QuickRx Administration
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            Doctor Management
-          </h1>
-          <p className="mt-2 text-slate-600">
-            Review registrations and manage doctor account access.
-          </p>
+        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
+              QuickRx Administration
+            </p>
+
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">
+              Doctor Management
+            </h1>
+
+            <p className="mt-2 text-slate-600">
+              Review registrations and manage doctor account access.
+            </p>
+
+            {user && (
+              <p className="mt-2 text-sm text-slate-500">
+                Signed in as {user.name}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+          >
+            Logout
+          </button>
         </header>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
