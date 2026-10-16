@@ -40,6 +40,9 @@ const getErrorMessage = async (response: Response): Promise<string> => {
   }
 };
 
+const isMissingRefreshSession = (message: string): boolean =>
+  message.toLowerCase().includes("refresh session is missing");
+
 export interface LoginInput {
   email: string;
   password: string;
