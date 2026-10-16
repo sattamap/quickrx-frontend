@@ -212,13 +212,7 @@ function NewVisitForm({
     };
 
     try {
-      const savedVisit =
-        await createVisit(newVisit);
-
-      console.log(
-        "Visit saved successfully:",
-        savedVisit,
-      );
+      await createVisit(newVisit);
 
       await showSuccess(
         "Visit saved successfully.",
