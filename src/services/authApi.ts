@@ -123,12 +123,30 @@ const requestCsrfToken = async (): Promise<string> => {
 
 /**
  * Refresh the short-lived access token.
- *
- * If no refresh session exists, the request fails and
- * the caller can treat the user as unauthenticated.
+ * A missing refresh session means the user is unauthenticated.
  */
 export const refreshAccessToken = async (): Promise<AuthResponse["data"]> => {
-  const csrfToken = await requestCsrfToken();
+  const csrfResponse = await fetch(`${API_URL}/auth/csrf`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!csrfResponse.ok) {
+    const message = await getErrorMessage(csrfResponse);
+
+    if (isMissingRefreshSession(message)) {
+      throw new Error("NO_REFRESH_SESSION");
+    }
+
+    throw new Error(message);
+  }
+
+  const csrfResult: CsrfResponse = await csrfResponse.json();
+  const csrfToken = csrfResult.data?.csrfToken;
+
+  if (!csrfToken) {
+    throw new Error("The server did not return a CSRF token.");
+  }
 
   const response = await fetch(`${API_URL}/auth/refresh`, {
     method: "POST",
