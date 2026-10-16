@@ -110,13 +110,6 @@ export const apiRequest = async <T>(
     });
   };
 
-  console.log(
-    "[apiClient] Request:",
-    endpoint,
-    "has access token:",
-    Boolean(accessToken),
-  );
-
   let response = await makeRequest(accessToken);
 
   /**
@@ -125,13 +118,7 @@ export const apiRequest = async <T>(
    */
   if (requiresAuth && response.status === 401) {
     try {
-      const newToken =
-  await getFreshAccessToken();
-
-console.log(
-  "[apiClient] Token refreshed:",
-  Boolean(newToken),
-);
+      const newToken = await getFreshAccessToken();
 
       response = await makeRequest(newToken);
     } catch {
