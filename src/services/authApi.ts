@@ -1,4 +1,3 @@
-
 const API_URL = "https://quickrx-backend.onrender.com/api";
 
 export interface AuthUser {
@@ -32,9 +31,7 @@ interface CsrfResponse {
   message?: string;
 }
 
-const getErrorMessage = async (
-  response: Response,
-): Promise<string> => {
+const getErrorMessage = async (response: Response): Promise<string> => {
   try {
     const result = await response.json();
     return result.message || "Authentication request failed.";
@@ -80,9 +77,7 @@ export const login = async (
 /**
  * Register a new doctor account.
  */
-export const register = async (
-  data: RegisterInput,
-): Promise<AuthUser> => {
+export const register = async (data: RegisterInput): Promise<AuthUser> => {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: {
@@ -128,11 +123,11 @@ const requestCsrfToken = async (): Promise<string> => {
 
 /**
  * Refresh the short-lived access token.
+ *
+ * If no refresh session exists, the request fails and
+ * the caller can treat the user as unauthenticated.
  */
-export const refreshAccessToken = async (): Promise<
-  AuthResponse["data"]
-> => {
-  // Obtain the current CSRF token immediately before refreshing.
+export const refreshAccessToken = async (): Promise<AuthResponse["data"]> => {
   const csrfToken = await requestCsrfToken();
 
   const response = await fetch(`${API_URL}/auth/refresh`, {
