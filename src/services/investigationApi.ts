@@ -8,11 +8,7 @@ import { apiRequest } from "./apiClient";
  * OU = Both eyes
  * NA = Not applicable
  */
-export type InvestigationEye =
-  | "OD"
-  | "OS"
-  | "OU"
-  | "NA";
+export type InvestigationEye = "OD" | "OS" | "OU" | "NA";
 
 /**
  * Investigation status.
@@ -115,13 +111,10 @@ export interface AddInvestigationResultInput {
 export const createInvestigation = async (
   data: CreateInvestigationInput,
 ): Promise<Investigation> => {
-  return apiRequest<Investigation>(
-    "/investigations",
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  );
+  return apiRequest<Investigation>("/investigations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 };
 
 /**
@@ -132,12 +125,9 @@ export const createInvestigation = async (
 export const getPatientInvestigations = async (
   patientId: string,
 ): Promise<Investigation[]> => {
-  return apiRequest<Investigation[]>(
-    `/investigations/patient/${patientId}`,
-    {
-      method: "GET",
-    },
-  );
+  return apiRequest<Investigation[]>(`/investigations/patient/${patientId}`, {
+    method: "GET",
+  });
 };
 
 /**
@@ -164,12 +154,9 @@ export const getPendingInvestigations = async (
 export const getInvestigation = async (
   investigationId: string,
 ): Promise<Investigation> => {
-  return apiRequest<Investigation>(
-    `/investigations/${investigationId}`,
-    {
-      method: "GET",
-    },
-  );
+  return apiRequest<Investigation>(`/investigations/${investigationId}`, {
+    method: "GET",
+  });
 };
 
 /**
@@ -181,13 +168,10 @@ export const updateInvestigation = async (
   investigationId: string,
   data: UpdateInvestigationInput,
 ): Promise<Investigation> => {
-  return apiRequest<Investigation>(
-    `/investigations/${investigationId}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    },
-  );
+  return apiRequest<Investigation>(`/investigations/${investigationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 };
 
 /**
@@ -238,4 +222,17 @@ export const cancelInvestigation = async (
       method: "PATCH",
     },
   );
+};
+
+/**
+ * Permanently delete an investigation.
+ *
+ * DELETE /api/investigations/:id
+ */
+export const deleteInvestigation = async (
+  investigationId: string,
+): Promise<void> => {
+  await apiRequest<void>(`/investigations/${investigationId}`, {
+    method: "DELETE",
+  });
 };

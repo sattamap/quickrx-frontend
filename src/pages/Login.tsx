@@ -26,6 +26,10 @@ const Login = () => {
 
   const [error, setError] = useState("");
 
+  const registrationSuccess = location.state?.registrationSuccess as
+    | string
+    | undefined;
+
   /**
    * If the user is already authenticated,
    * don't show the login page.
@@ -107,6 +111,14 @@ const Login = () => {
 
           {/* Login card */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            {registrationSuccess && (
+              <div
+                role="status"
+                className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
+              >
+                {registrationSuccess}
+              </div>
+            )}
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-slate-900">Sign in</h2>
 

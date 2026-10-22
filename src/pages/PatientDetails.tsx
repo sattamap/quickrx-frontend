@@ -78,7 +78,11 @@ function PatientDetails() {
         setPatient(patientData);
         setVisits(visitsData);
         setPrescriptions(prescriptionsData);
-        setInvestigations(investigationsData);
+        setInvestigations(
+          investigationsData.filter(
+            (investigation) => investigation.status !== "cancelled",
+          ),
+        );
       } catch (loadError) {
         console.error("Failed to load patient details:", loadError);
 
@@ -102,7 +106,11 @@ function PatientDetails() {
     try {
       const investigationData = await getPatientInvestigations(patientId);
 
-      setInvestigations(investigationData);
+      setInvestigations(
+        investigationData.filter(
+          (investigation) => investigation.status !== "cancelled",
+        ),
+      );
     } catch (loadError) {
       console.error("Failed to reload investigations:", loadError);
     }
@@ -789,8 +797,15 @@ function PatientDetails() {
                       key={visit.id}
                       className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                     >
-                      <td className="px-5 py-4 text-gray-700">
-                        {new Date(visit.visitDate).toLocaleDateString()}
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-gray-900">
+                          {new Date(visit.visitDate).toLocaleDateString(
+                            "en-GB",
+                          )}
+                        </div>
+                        <div className="mt-0.5 text-sm text-gray-600">
+                          <span>(</span>{getVisitNumber(visit.id)}<span>)</span>
+                        </div>
                       </td>
 
                       <td className="px-5 py-4 text-gray-700">

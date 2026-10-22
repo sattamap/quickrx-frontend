@@ -1,18 +1,12 @@
 import { useState, type SyntheticEvent } from "react";
-import {
-  Link,
-  Navigate,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/useAuth";
 import { register } from "../services/authApi";
 
 function Register() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated} = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,14 +18,11 @@ function Register() {
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleSubmit = async (
-    event: SyntheticEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
@@ -68,17 +59,14 @@ function Register() {
         password,
       });
 
-      // Registration creates the account.
-      // Login immediately so the doctor does not need
-      // to enter the credentials again.
-      await login({
-        email: trimmedEmail,
-        password,
+      // Navigate to login after showing the confirmation.
+      navigate("/login", {
+        replace: true,
+        state: {
+          registrationSuccess:
+            "Registration received! Your account is waiting for admin approval. You can sign in after your account has been approved.",
+        },
       });
-
-      const from = location.state?.from?.pathname;
-
-      navigate(from || "/dashboard", { replace: true });
     } catch (caughtError) {
       console.error("Registration failed:", caughtError);
 
@@ -97,9 +85,7 @@ function Register() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            QuickRx
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">QuickRx</h1>
 
           <p className="mt-2 text-sm text-gray-500">
             Create your doctor account
@@ -224,9 +210,7 @@ function Register() {
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
-                  onChange={(event) =>
-                    setConfirmPassword(event.target.value)
-                  }
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Enter your password again"
                   autoComplete="new-password"
                   disabled={isSubmitting}
@@ -237,9 +221,7 @@ function Register() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowConfirmPassword((current) => !current)
-                  }
+                  onClick={() => setShowConfirmPassword((current) => !current)}
                   disabled={isSubmitting}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400"
                 >

@@ -13,6 +13,7 @@ import {
   clearAccessToken,
   getAccessToken,
   setAccessToken,
+  setAuthSessionExpiredHandler,
 } from "../services/apiClient";
 
 import { AuthContext } from "./AuthContext";
@@ -25,6 +26,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setAuthSessionExpiredHandler(() => {
+      clearAccessToken();
+      setUser(null);
+    });
+
+    return () => {
+      setAuthSessionExpiredHandler(null);
+    };
+  }, []);
 
   const initializeAuth = useCallback(async () => {
     try {

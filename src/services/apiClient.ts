@@ -1,11 +1,22 @@
 import { refreshAccessToken } from "./authApi";
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "https://quickrx-backend.onrender.com/api"
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
 ).replace(/\/+$/, "");
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string> | null = null;
+
+/**
+ * Notify AuthProvider when the authentication session expires.
+ */
+let onAuthSessionExpired: (() => void) | null = null;
+
+export const setAuthSessionExpiredHandler = (
+  handler: (() => void) | null,
+): void => {
+  onAuthSessionExpired = handler;
+};
 
 interface ApiValidationError {
   field: string;
@@ -116,6 +127,18 @@ export const apiRequest = async <T>(
    * If the access token expired, try to refresh it
    * and retry the original request once.
    */
+  // if (requiresAuth && response.status === 401) {
+  //   try {
+  //     const newToken = await getFreshAccessToken();
+
+  //     response = await makeRequest(newToken);
+  //   } catch {
+  //     clearAccessToken();
+
+  //     throw new Error("Authentication session expired.");
+  //   }
+  // }
+
   if (requiresAuth && response.status === 401) {
     try {
       const newToken = await getFreshAccessToken();
@@ -123,6 +146,9 @@ export const apiRequest = async <T>(
       response = await makeRequest(newToken);
     } catch {
       clearAccessToken();
+
+      // Notify AuthProvider to clear the authenticated user.
+      onAuthSessionExpired?.();
 
       throw new Error("Authentication session expired.");
     }

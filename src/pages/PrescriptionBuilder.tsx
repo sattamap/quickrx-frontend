@@ -28,7 +28,7 @@ import {
   createInvestigation,
   getPatientInvestigations,
   updateInvestigation,
-  cancelInvestigation,
+  deleteInvestigation,
   type Investigation,
   type InvestigationEye,
 } from "../services/investigationApi.ts";
@@ -227,24 +227,7 @@ function PrescriptionBuilder() {
         } else {
           setMedicines([]);
 
-          setSpectaclePrescription({
-            right: {
-              sph: "",
-              cyl: "",
-              axis: "",
-              visualAcuity: "",
-            },
-
-            left: {
-              sph: "",
-              cyl: "",
-              axis: "",
-              visualAcuity: "",
-            },
-
-            nearAddition: "",
-            pd: "",
-          });
+          setSpectaclePrescription(emptySpectaclePrescription);
 
           setAdvice(prescriptionSettings.defaultAdvice);
 
@@ -434,8 +417,7 @@ function PrescriptionBuilder() {
     const alreadyExists = investigations.some(
       (investigation) =>
         investigation.testName.toLowerCase() === testName.toLowerCase() &&
-        investigation.eye === investigationEye &&
-        investigation.status !== "cancelled",
+        investigation.eye === investigationEye,
     );
 
     if (alreadyExists) {
@@ -498,6 +480,8 @@ function PrescriptionBuilder() {
    * Save / update prescription.
    */
   const handleSavePrescription = async () => {
+    const wasExistingPrescription = Boolean(existingPrescription?.id);
+
     if (!patient || !visit) {
       await showError("Patient or visit information is missing.");
 
@@ -537,12 +521,16 @@ function PrescriptionBuilder() {
         savedPrescription = await createPrescription(prescriptionData);
       }
 
+      // Preserve the saved ID if a later investigation request fails.
+      setExistingPrescription(savedPrescription);
+
       /*
        * Synchronize investigations for this visit.
        *
        * New investigations are created.
-       * Existing investigations are updated.
-       * Removed investigations are cancelled.
+       * Existing editable investigations are updated.
+       * Removed investigations are permanently deleted.
+       * Completed/reviewed investigations remain unchanged.
        */
 
       const currentInvestigationIds = investigations
@@ -554,13 +542,18 @@ function PrescriptionBuilder() {
       );
 
       /*
-       * Cancel investigations removed from the builder.
+       * Permanently delete investigations removed from the builder.
+       *
+       * Process sequentially so successful deletions are reflected
+       * in state before attempting the next deletion.
        */
-      await Promise.all(
-        removedInvestigationIds.map((investigationId) =>
-          cancelInvestigation(investigationId),
-        ),
-      );
+      for (const investigationId of removedInvestigationIds) {
+        await deleteInvestigation(investigationId);
+
+        setOriginalInvestigationIds((current) =>
+          current.filter((id) => id !== investigationId),
+        );
+      }
 
       /*
        * Create/update current investigations.
@@ -574,83 +567,87 @@ function PrescriptionBuilder() {
        * This prevents duplicate investigation creation
        * when the prescription is saved again.
        */
-      const savedInvestigations = await Promise.all(
-        investigations.map(async (investigation) => {
-          /*
-           * Existing investigation.
-           */
-          if (investigation.investigationId) {
-            /*
-             * Completed/reviewed investigations
-             * should remain untouched.
-             */
-            if (
-              investigation.status === "completed" ||
-              investigation.status === "reviewed"
-            ) {
-              return investigation;
-            }
+      const savedInvestigations: InvestigationDraft[] = [];
 
-            const updatedInvestigation = await updateInvestigation(
-              investigation.investigationId,
-              {
-                testName: investigation.testName.trim(),
-                eye: investigation.eye,
-              },
-            );
-
-            return {
-              ...investigation,
-              testName: updatedInvestigation.testName,
-              eye: updatedInvestigation.eye,
-              status: updatedInvestigation.status,
-            };
+      for (const investigation of investigations) {
+        // Update an existing investigation.
+        if (investigation.investigationId) {
+          // Completed/reviewed investigations remain unchanged.
+          if (
+            investigation.status === "completed" ||
+            investigation.status === "reviewed"
+          ) {
+            savedInvestigations.push(investigation);
+            continue;
           }
 
-          /*
-           * New investigation.
-           */
-          const createdInvestigation = await createInvestigation({
-            patientId: patient.id,
+          const updatedInvestigation = await updateInvestigation(
+            investigation.investigationId,
+            {
+              testName: investigation.testName.trim(),
+              eye: investigation.eye,
+            },
+          );
 
-            orderedVisitId: visit.id,
-
-            testName: investigation.testName.trim(),
-
-            eye: investigation.eye,
-
-            orderedDate: visit.visitDate,
-
-            result: "",
-
-            notes: "",
-
-            status: "ordered",
-          });
-
-          /*
-           * Store the real MongoDB investigation ID
-           * in the local state.
-           */
-          return {
+          const updatedDraft: InvestigationDraft = {
             ...investigation,
-
-            localId: createdInvestigation._id,
-
-            investigationId: createdInvestigation._id,
-
-            status: createdInvestigation.status,
-
-            result: createdInvestigation.result,
-
-            testDate: createdInvestigation.testDate,
+            testName: updatedInvestigation.testName,
+            eye: updatedInvestigation.eye,
+            status: updatedInvestigation.status,
           };
-        }),
-      );
+
+          savedInvestigations.push(updatedDraft);
+
+          // Preserve the successful update if a later request fails.
+          setInvestigations((current) =>
+            current.map((item) =>
+              item.localId === updatedDraft.localId ? updatedDraft : item,
+            ),
+          );
+
+          continue;
+        }
+
+        // Create a new investigation.
+        const createdInvestigation = await createInvestigation({
+          patientId: patient.id,
+          orderedVisitId: visit.id,
+          testName: investigation.testName.trim(),
+          eye: investigation.eye,
+          orderedDate: visit.visitDate,
+          result: "",
+          notes: "",
+          status: "ordered",
+        });
+
+        const createdDraft: InvestigationDraft = {
+          ...investigation,
+          localId: createdInvestigation._id,
+          investigationId: createdInvestigation._id,
+          status: createdInvestigation.status,
+          result: createdInvestigation.result,
+          testDate: createdInvestigation.testDate,
+        };
+
+        savedInvestigations.push(createdDraft);
+
+        // Store the real database ID immediately.
+        setInvestigations((current) =>
+          current.map((item) =>
+            item.localId === investigation.localId ? createdDraft : item,
+          ),
+        );
+
+        setOriginalInvestigationIds((current) =>
+          current.includes(createdInvestigation._id)
+            ? current
+            : [...current, createdInvestigation._id],
+        );
+      }
 
       /*
        * Keep the investigation state synchronized with
-       * the database after saving.
+       * the database after all requests succeed.
        */
       setInvestigations(savedInvestigations);
 
@@ -660,10 +657,8 @@ function PrescriptionBuilder() {
           .filter((id): id is string => Boolean(id)),
       );
 
-      setExistingPrescription(savedPrescription);
-
       await showSuccess(
-        existingPrescription
+        wasExistingPrescription
           ? "Prescription updated successfully."
           : "Prescription saved successfully.",
       );
@@ -818,7 +813,7 @@ function PrescriptionBuilder() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Patient
               </p>
-              <p className="mt-1 wrap-break- text-sm font-semibold text-slate-900">
+              <p className="mt-1 break-words text-sm font-semibold text-slate-900">
                 {patient.name}
               </p>
             </div>
@@ -846,7 +841,7 @@ function PrescriptionBuilder() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Visit Date
               </p>
-              <p className="mt-1 wrap-break- text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {visit.visitDate}
               </p>
             </div>
@@ -856,7 +851,7 @@ function PrescriptionBuilder() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Referred By
               </p>
-              <p className="mt-1 wrap-break- text-sm font-medium text-slate-900">
+              <p className="mt-1 break-words text-sm font-medium text-slate-900">
                 {patient.referredBy?.name || "—"}
               </p>
             </div>
