@@ -18,6 +18,11 @@ import {
 
 import { AuthContext } from "./AuthContext";
 
+import {
+  connectBookingSocket,
+  disconnectBookingSocket,
+} from "../lib/bookingSocket";
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -30,6 +35,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     setAuthSessionExpiredHandler(() => {
       clearAccessToken();
+      disconnectBookingSocket(); //disconnects the socket
       setUser(null);
     });
 
@@ -121,9 +127,49 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
        * Always clear local authentication state.
        */
       clearAccessToken();
+      //  Disconnect on logout for socket
+      disconnectBookingSocket();
       setUser(null);
     }
   }, []);
+
+  // Connect the booking socket for doctors and receptionists.
+  useEffect(() => {
+    if (
+      isLoading ||
+      (user?.role !== "doctor" && user?.role !== "receptionist")
+    ) {
+      disconnectBookingSocket();
+      return;
+    }
+
+    const accessToken = getAccessToken();
+
+    if (!accessToken) {
+      disconnectBookingSocket();
+      return;
+    }
+
+    let socket: ReturnType<typeof connectBookingSocket>;
+
+    try {
+      socket = connectBookingSocket(accessToken);
+    } catch (error: unknown) {
+      console.error("Unable to initialize booking socket:", error);
+      return;
+    }
+
+    const handleConnectError = (error: Error) => {
+      console.error("Booking socket connection failed:", error.message);
+    };
+
+    socket.on("connect_error", handleConnectError);
+
+    return () => {
+      socket.off("connect_error", handleConnectError);
+      disconnectBookingSocket();
+    };
+  }, [user, isLoading]);
 
   const value = {
     user,

@@ -11,4 +11,11 @@ export interface PrescriptionSettings {
   showDiagnosis: boolean;
   showSpectaclePrescription: boolean;
   showSignature: boolean;
+
+    // Prescription footer
+  showChamberFooter: boolean;
+  footerHeading: string;
+  visitingHours: string;
+  serialBookingPhone: string;
+  weeklyClosingDay: string;
 }

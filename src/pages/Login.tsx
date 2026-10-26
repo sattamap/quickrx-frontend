@@ -12,6 +12,18 @@ interface LoginLocationState {
   };
 }
 
+const getHomePath = (role: "admin" | "doctor" | "receptionist") => {
+  switch (role) {
+    case "admin":
+      return "/admin";
+    case "receptionist":
+      return "/receptionist";
+    case "doctor":
+    default:
+      return "/dashboard";
+  }
+};
+
 const Login = () => {
   const { login, user, isAuthenticated, isLoading } = useAuth();
 
@@ -35,9 +47,7 @@ const Login = () => {
    * don't show the login page.
    */
   if (!isLoading && isAuthenticated) {
-    return (
-      <Navigate to={user?.role === "admin" ? "/admin" : "/dashboard"} replace />
-    );
+    return <Navigate to={getHomePath(user!.role)} replace />;
   }
 
   const locationState = location.state as LoginLocationState | null;
@@ -55,27 +65,34 @@ const Login = () => {
       });
 
       const from = locationState?.from;
+      const requestedPath = from?.pathname;
+      const role = authenticatedUser.role;
 
-      if (from?.pathname) {
-        const requestedAdminPage = from.pathname.startsWith("/admin");
+      const isAllowedPath = requestedPath
+        ? role === "admin"
+          ? requestedPath === "/admin" || requestedPath.startsWith("/admin/")
+          : role === "receptionist"
+            ? requestedPath === "/receptionist" ||
+              requestedPath.startsWith("/receptionist/")
+            : [
+                "/",
+                "/dashboard",
+                "/patients",
+                "/prescriptions",
+                "/settings",
+              ].some(
+                (path) =>
+                  requestedPath === path ||
+                  (path !== "/" && requestedPath.startsWith(`${path}/`)),
+              )
+        : false;
 
-        if (
-          (authenticatedUser.role === "admin" && requestedAdminPage) ||
-          (authenticatedUser.role === "doctor" && !requestedAdminPage)
-        ) {
-          navigate(`${from.pathname}${from.search ?? ""}${from.hash ?? ""}`, {
-            replace: true,
-          });
-        } else {
-          navigate(
-            authenticatedUser.role === "admin" ? "/admin" : "/dashboard",
-            { replace: true },
-          );
-        }
-      } else {
-        navigate(authenticatedUser.role === "admin" ? "/admin" : "/dashboard", {
+      if (requestedPath && isAllowedPath) {
+        navigate(`${requestedPath}${from?.search ?? ""}${from?.hash ?? ""}`, {
           replace: true,
         });
+      } else {
+        navigate(getHomePath(role), { replace: true });
       }
     } catch (loginError) {
       console.error("Login failed:", loginError);

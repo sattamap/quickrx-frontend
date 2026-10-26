@@ -1,15 +1,19 @@
 
 import { useNavigate, useParams } from "react-router-dom";
+
 import { getPatientById } from "../services/patientApi.ts";
 import { getVisitById } from "../services/visitApi.ts";
+
 import {
   deletePrescription,
   getPrescriptionByVisitId,
 } from "../services/prescriptionApi.ts";
+
 import {
   getPatientInvestigations,
   type Investigation,
 } from "../services/investigationApi.ts";
+
 import { getDoctorProfile } from "../services/doctorProfileApi.ts";
 import { getPrescriptionSettings } from "../services/prescriptionSettingsApi.ts";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -161,6 +165,31 @@ function PrescriptionPreview() {
 
   const shouldShowSpectaclePrescription =
     prescriptionSettings.showSpectaclePrescription && hasSpectacleData;
+
+  /*
+   * Chamber footer settings.
+   *
+   * The fallbacks preserve the existing footer for older settings records
+   * that might not yet contain the new fields.
+   */
+  const showChamberFooter =
+    prescriptionSettings.showChamberFooter !== false;
+
+  const footerHeading =
+    prescriptionSettings.footerHeading?.trim() ||
+    "রোগী দেখার সময় ও সিরিয়াল";
+
+  const visitingHours =
+    prescriptionSettings.visitingHours?.trim() ||
+    "বিকাল ৫টা থেকে রাত ৯টা পর্যন্ত";
+
+  const serialBookingPhone =
+    prescriptionSettings.serialBookingPhone?.trim() ||
+    "০১৯২১৯০৯১১";
+
+  const weeklyClosingDay =
+    prescriptionSettings.weeklyClosingDay?.trim() ||
+    "প্রতি শুক্রবার";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 print:max-w-none">
@@ -349,9 +378,9 @@ function PrescriptionPreview() {
           </p>
         </div>
 
-        {/* Body */}
+        {/* Prescription Body */}
         <div className="grid grid-cols-1 gap-4 rounded-lg bg-white/45 py-3 sm:grid-cols-12 sm:gap-5">
-          {/* Left column */}
+          {/* Left Column */}
           <div className="space-y-4 sm:col-span-4 sm:border-r sm:border-gray-200 sm:pr-4">
             {/* Diagnosis */}
             {prescriptionSettings.showDiagnosis && (
@@ -444,7 +473,7 @@ function PrescriptionPreview() {
             )}
           </div>
 
-          {/* Right column */}
+          {/* Right Column */}
           <div className="sm:col-span-8">
             <h3 className="flex items-baseline gap-1.5 rounded-md border-l-2 border-teal-600 bg-gradient-to-r from-teal-50/90 to-white px-2 py-1 text-sm font-bold text-teal-900 sm:text-base">
               <span className="text-lg font-bold sm:text-xl">℞</span>
@@ -566,7 +595,7 @@ function PrescriptionPreview() {
 
         {/* Footer / Signature */}
         <div className="prescription-signature mt-5 border-t-2 border-teal-700 pt-4">
-          {/* Doctor Signature */}
+          {/* Doctor Signature - controlled independently */}
           {prescriptionSettings.showSignature && (
             <div className="flex items-end justify-between gap-4 pb-4">
               <p className="max-w-[55%] text-[10px] text-gray-400">
@@ -596,76 +625,78 @@ function PrescriptionPreview() {
             </div>
           )}
 
-          {/* Bangla Chamber Information Footer */}
-          <div className="overflow-hidden rounded-lg border border-teal-200 print:rounded-none">
-            <div className="bg-teal-700 px-3 py-2 text-center text-white print:bg-teal-700">
-              <p className="text-sm font-bold sm:text-base">
-                রোগী দেখার সময় ও সিরিয়াল
-              </p>
+          {/* Dynamic Bangla Chamber Information Footer */}
+          {showChamberFooter && (
+            <div className="overflow-hidden rounded-lg border border-teal-200 print:rounded-none">
+              <div className="bg-teal-700 px-3 py-2 text-center text-white print:bg-teal-700 print:print-color-adjust-exact">
+                <p className="text-sm font-bold sm:text-base">
+                  {footerHeading}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 bg-teal-50 p-3 sm:grid-cols-3 sm:gap-2 print:grid-cols-3 print:gap-2 print:bg-teal-50 print:print-color-adjust-exact">
+                {/* Visiting Hours */}
+                <div className="flex items-center gap-2 sm:justify-center">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-700 print:bg-white"
+                    aria-hidden="true"
+                  >
+                    ◷
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
+                      সাক্ষাতের সময়
+                    </p>
+
+                    <p className="whitespace-pre-line break-words text-xs font-medium text-gray-800 sm:text-sm">
+                      {visitingHours}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Serial Booking */}
+                <div className="flex items-center gap-2 border-t border-teal-100 pt-3 sm:justify-center sm:border-l sm:border-t-0 sm:pt-0 sm:pl-2">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-700 print:bg-white"
+                    aria-hidden="true"
+                  >
+                    ☎
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
+                      সিরিয়ালের জন্য ফোন করুন
+                    </p>
+
+                    <p className="break-words text-sm font-bold tracking-wide text-teal-800 sm:text-base">
+                      {serialBookingPhone}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Weekly Closing */}
+                <div className="flex items-center gap-2 border-t border-teal-100 pt-3 sm:justify-center sm:border-l sm:pt-0 sm:pl-2">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-red-600 print:bg-white"
+                    aria-hidden="true"
+                  >
+                    ✕
+                  </span>
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
+                      সাপ্তাহিক বন্ধ
+                    </p>
+
+                    <p className="break-words text-xs font-bold text-red-700 sm:text-sm">
+                      {weeklyClosingDay}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-3 bg-teal-50 p-3 sm:grid-cols-3 sm:gap-2 print:grid-cols-3 print:gap-2 print:bg-teal-50">
-              {/* Visiting Hours */}
-              <div className="flex items-center gap-2 sm:justify-center">
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-700 print:bg-white"
-                  aria-hidden="true"
-                >
-                  ◷
-                </span>
-
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
-                    সাক্ষাতের সময়
-                  </p>
-
-                  <p className="text-xs font-medium text-gray-800 sm:text-sm">
-                    বিকাল ৫টা থেকে রাত ৯টা পর্যন্ত
-                  </p>
-                </div>
-              </div>
-
-              {/* Serial Booking */}
-              <div className="flex items-center gap-2 border-t border-teal-100 pt-3 sm:justify-center sm:border-l sm:border-t-0 sm:pt-0 sm:pl-2">
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-teal-700 print:bg-white"
-                  aria-hidden="true"
-                >
-                  ☎
-                </span>
-
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
-                    সিরিয়ালের জন্য ফোন করুন
-                  </p>
-
-                  <p className="text-sm font-bold tracking-wide text-teal-800 sm:text-base">
-                    ০১৯২১৯০৯১১
-                  </p>
-                </div>
-              </div>
-
-              {/* Weekly Closing */}
-              <div className="flex items-center gap-2 border-t border-teal-100 pt-3 sm:justify-center sm:border-l sm:pt-0 sm:pl-2">
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-red-600 print:bg-white"
-                  aria-hidden="true"
-                >
-                  ✕
-                </span>
-
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-teal-800 sm:text-xs">
-                    সাপ্তাহিক বন্ধ
-                  </p>
-
-                  <p className="text-xs font-bold text-red-700 sm:text-sm">
-                    প্রতি শুক্রবার
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

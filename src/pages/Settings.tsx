@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import {
@@ -37,6 +38,13 @@ const defaultPrescriptionSettings: PrescriptionSettings = {
   showDiagnosis: true,
   showSpectaclePrescription: true,
   showSignature: true,
+
+  // Chamber footer settings
+  showChamberFooter: true,
+  footerHeading: "রোগী দেখার সময় ও সিরিয়াল",
+  visitingHours: "বিকাল ৫টা থেকে রাত ৯টা পর্যন্ত",
+  serialBookingPhone: "০১৯২১৯০৯১১",
+  weeklyClosingDay: "প্রতি শুক্রবার",
 };
 
 function Settings() {
@@ -49,10 +57,7 @@ function Settings() {
     );
 
   const [isLoading, setIsLoading] = useState(true);
-
-  const [isSavingProfile, setIsSavingProfile] =
-    useState(false);
-
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrescriptionSettings, setIsSavingPrescriptionSettings] =
     useState(false);
 
@@ -72,19 +77,20 @@ function Settings() {
           ]);
 
         if (savedProfile) {
-          setProfile(savedProfile);
+          setProfile({
+            ...emptyProfile,
+            ...savedProfile,
+          });
         }
 
         if (savedPrescriptionSettings) {
-          setPrescriptionSettings(
-            savedPrescriptionSettings,
-          );
+          setPrescriptionSettings({
+            ...defaultPrescriptionSettings,
+            ...savedPrescriptionSettings,
+          });
         }
       } catch (error) {
-        console.error(
-          "Failed to load settings:",
-          error,
-        );
+        console.error("Failed to load settings:", error);
 
         setError(
           error instanceof Error
@@ -141,30 +147,26 @@ function Settings() {
       setError("");
       setSuccessMessage("");
 
-      const savedProfile =
-        await updateDoctorProfile({
-          ...profile,
-          doctorName: profile.doctorName.trim(),
-          qualification: profile.qualification.trim(),
-          specialty: profile.specialty.trim(),
-          registrationNumber:
-            profile.registrationNumber.trim(),
-          phone: profile.phone.trim(),
-          email: profile.email.trim(),
-          clinicName: profile.clinicName.trim(),
-          clinicAddress: profile.clinicAddress.trim(),
-        });
+      const savedProfile = await updateDoctorProfile({
+        ...profile,
+        doctorName: profile.doctorName.trim(),
+        qualification: profile.qualification.trim(),
+        specialty: profile.specialty.trim(),
+        registrationNumber: profile.registrationNumber.trim(),
+        phone: profile.phone.trim(),
+        email: profile.email.trim(),
+        clinicName: profile.clinicName.trim(),
+        clinicAddress: profile.clinicAddress.trim(),
+      });
 
-      setProfile(savedProfile);
+      setProfile({
+        ...emptyProfile,
+        ...savedProfile,
+      });
 
-      setSuccessMessage(
-        "Doctor profile saved successfully.",
-      );
+      setSuccessMessage("Doctor profile saved successfully.");
     } catch (error) {
-      console.error(
-        "Failed to save doctor profile:",
-        error,
-      );
+      console.error("Failed to save doctor profile:", error);
 
       setError(
         error instanceof Error
@@ -176,46 +178,55 @@ function Settings() {
     }
   };
 
-  const handlePrescriptionSettingsSubmit =
-    async (
-      event: React.FormEvent<HTMLFormElement>,
-    ) => {
-      event.preventDefault();
+  const handlePrescriptionSettingsSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
 
-      try {
-        setIsSavingPrescriptionSettings(true);
-        setError("");
-        setSuccessMessage("");
+    try {
+      setIsSavingPrescriptionSettings(true);
+      setError("");
+      setSuccessMessage("");
 
-        const savedSettings =
-          await updatePrescriptionSettings({
-            ...prescriptionSettings,
-            defaultAdvice:
-              prescriptionSettings.defaultAdvice.trim(),
-            defaultFollowUp:
-              prescriptionSettings.defaultFollowUp.trim(),
-          });
+      const savedSettings = await updatePrescriptionSettings({
+        ...prescriptionSettings,
+        defaultAdvice:
+          prescriptionSettings.defaultAdvice.trim(),
+        defaultFollowUp:
+          prescriptionSettings.defaultFollowUp.trim(),
+        footerHeading:
+          prescriptionSettings.footerHeading.trim(),
+        visitingHours:
+          prescriptionSettings.visitingHours.trim(),
+        serialBookingPhone:
+          prescriptionSettings.serialBookingPhone.trim(),
+        weeklyClosingDay:
+          prescriptionSettings.weeklyClosingDay.trim(),
+      });
 
-        setPrescriptionSettings(savedSettings);
+      setPrescriptionSettings({
+        ...defaultPrescriptionSettings,
+        ...savedSettings,
+      });
 
-        setSuccessMessage(
-          "Prescription settings saved successfully.",
-        );
-      } catch (error) {
-        console.error(
-          "Failed to save prescription settings:",
-          error,
-        );
+      setSuccessMessage(
+        "Prescription settings saved successfully.",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to save prescription settings:",
+        error,
+      );
 
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to save prescription settings.",
-        );
-      } finally {
-        setIsSavingPrescriptionSettings(false);
-      }
-    };
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save prescription settings.",
+      );
+    } finally {
+      setIsSavingPrescriptionSettings(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -226,8 +237,7 @@ function Settings() {
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Manage your doctor, clinic, and prescription
-            settings.
+            Manage your doctor, clinic, and prescription settings.
           </p>
         </div>
 
@@ -242,21 +252,23 @@ function Settings() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
           Settings
         </h1>
 
         <p className="mt-1 text-sm text-gray-500">
-          Manage your doctor, clinic, and prescription
-          settings.
+          Manage your doctor, clinic, and prescription settings.
         </p>
       </div>
 
-      {/* Error */}
+      {/* Error Message */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+        >
           <p className="text-sm font-medium text-red-700">
             {error}
           </p>
@@ -276,8 +288,7 @@ function Settings() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            This information will be used on patient
-            prescriptions.
+            This information will be used on patient prescriptions.
           </p>
         </div>
 
@@ -302,11 +313,12 @@ function Settings() {
                 )
               }
               placeholder="Dr. Your Name"
+              required
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
-          {/* Qualification + Specialty */}
+          {/* Qualification and Specialty */}
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
@@ -379,7 +391,7 @@ function Settings() {
             />
           </div>
 
-          {/* Phone + Email */}
+          {/* Phone and Email */}
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
@@ -477,9 +489,9 @@ function Settings() {
           </div>
         </div>
 
-        {/* Doctor Profile Footer */}
+        {/* Doctor Profile Actions */}
         <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div aria-live="polite">
             {successMessage && (
               <p className="text-sm font-medium text-green-600">
                 {successMessage}
@@ -512,9 +524,8 @@ function Settings() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Configure default prescription text and
-            control which information appears on printed
-            prescriptions.
+            Configure default prescription text and control which
+            information appears on printed prescriptions.
           </p>
         </div>
 
@@ -530,9 +541,7 @@ function Settings() {
 
             <textarea
               id="defaultAdvice"
-              value={
-                prescriptionSettings.defaultAdvice
-              }
+              value={prescriptionSettings.defaultAdvice}
               onChange={(event) =>
                 handlePrescriptionSettingChange(
                   "defaultAdvice",
@@ -545,8 +554,8 @@ function Settings() {
             />
 
             <p className="mt-1.5 text-xs text-gray-500">
-              This will be used as the default advice when
-              creating a new prescription.
+              Used as the default advice when creating a new
+              prescription.
             </p>
           </div>
 
@@ -562,9 +571,7 @@ function Settings() {
             <input
               id="defaultFollowUp"
               type="text"
-              value={
-                prescriptionSettings.defaultFollowUp
-              }
+              value={prescriptionSettings.defaultFollowUp}
               onChange={(event) =>
                 handlePrescriptionSettingChange(
                   "defaultFollowUp",
@@ -576,29 +583,27 @@ function Settings() {
             />
 
             <p className="mt-1.5 text-xs text-gray-500">
-              This will be used as the default follow-up
-              when creating a new prescription.
+              Used as the default follow-up when creating a new
+              prescription.
             </p>
           </div>
 
-          {/* Doctor / Clinic Display */}
+          {/* Doctor and Clinic Information */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
               Doctor &amp; Clinic Information
             </h3>
 
             <p className="mt-1 text-xs text-gray-500">
-              Choose which doctor and clinic details should
-              appear on the printed prescription.
+              Choose which doctor and clinic details should appear
+              on the printed prescription.
             </p>
 
             <div className="mt-4 space-y-3">
               <ToggleSetting
                 label="Show Doctor Phone"
                 description="Display the doctor's phone number."
-                checked={
-                  prescriptionSettings.showDoctorPhone
-                }
+                checked={prescriptionSettings.showDoctorPhone}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showDoctorPhone",
@@ -610,9 +615,7 @@ function Settings() {
               <ToggleSetting
                 label="Show Doctor Email"
                 description="Display the doctor's email address."
-                checked={
-                  prescriptionSettings.showDoctorEmail
-                }
+                checked={prescriptionSettings.showDoctorEmail}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showDoctorEmail",
@@ -638,9 +641,7 @@ function Settings() {
               <ToggleSetting
                 label="Show Clinic Address"
                 description="Display the clinic/chamber address."
-                checked={
-                  prescriptionSettings.showClinicAddress
-                }
+                checked={prescriptionSettings.showClinicAddress}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showClinicAddress",
@@ -651,6 +652,136 @@ function Settings() {
             </div>
           </div>
 
+          {/* Chamber Footer Settings */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Chamber Footer Settings
+            </h3>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Customize the chamber information displayed at the
+              bottom of printed prescriptions.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <ToggleSetting
+                label="Show Chamber Footer"
+                description="Display or hide the chamber information footer on prescriptions."
+                checked={prescriptionSettings.showChamberFooter}
+                onChange={(checked) =>
+                  handlePrescriptionSettingChange(
+                    "showChamberFooter",
+                    checked,
+                  )
+                }
+              />
+
+              <div>
+                <label
+                  htmlFor="footerHeading"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Footer Heading
+                </label>
+
+                <input
+                  id="footerHeading"
+                  type="text"
+                  value={prescriptionSettings.footerHeading}
+                  onChange={(event) =>
+                    handlePrescriptionSettingChange(
+                      "footerHeading",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="রোগী দেখার সময় ও সিরিয়াল"
+                  disabled={
+                    !prescriptionSettings.showChamberFooter
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="visitingHours"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Visiting Hours
+                </label>
+
+                <input
+                  id="visitingHours"
+                  type="text"
+                  value={prescriptionSettings.visitingHours}
+                  onChange={(event) =>
+                    handlePrescriptionSettingChange(
+                      "visitingHours",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="বিকাল ৫টা থেকে রাত ৯টা পর্যন্ত"
+                  disabled={
+                    !prescriptionSettings.showChamberFooter
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="serialBookingPhone"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Serial Booking Phone
+                </label>
+
+                <input
+                  id="serialBookingPhone"
+                  type="tel"
+                  value={prescriptionSettings.serialBookingPhone}
+                  onChange={(event) =>
+                    handlePrescriptionSettingChange(
+                      "serialBookingPhone",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="০১৯২১৯০৯১১"
+                  disabled={
+                    !prescriptionSettings.showChamberFooter
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="weeklyClosingDay"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Weekly Closing Day
+                </label>
+
+                <input
+                  id="weeklyClosingDay"
+                  type="text"
+                  value={prescriptionSettings.weeklyClosingDay}
+                  onChange={(event) =>
+                    handlePrescriptionSettingChange(
+                      "weeklyClosingDay",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="প্রতি শুক্রবার"
+                  disabled={
+                    !prescriptionSettings.showChamberFooter
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Prescription Content Display */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
@@ -658,17 +789,15 @@ function Settings() {
             </h3>
 
             <p className="mt-1 text-xs text-gray-500">
-              Choose which patient and clinical information
-              should appear on the printed prescription.
+              Choose which patient and clinical information should
+              appear on the printed prescription.
             </p>
 
             <div className="mt-4 space-y-3">
               <ToggleSetting
                 label="Show Patient ID"
                 description="Display the patient's QuickRx ID."
-                checked={
-                  prescriptionSettings.showPatientId
-                }
+                checked={prescriptionSettings.showPatientId}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showPatientId",
@@ -680,9 +809,7 @@ function Settings() {
               <ToggleSetting
                 label="Show Diagnosis"
                 description="Display the visit diagnosis."
-                checked={
-                  prescriptionSettings.showDiagnosis
-                }
+                checked={prescriptionSettings.showDiagnosis}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showDiagnosis",
@@ -708,9 +835,7 @@ function Settings() {
               <ToggleSetting
                 label="Show Signature"
                 description="Display the doctor's signature area."
-                checked={
-                  prescriptionSettings.showSignature
-                }
+                checked={prescriptionSettings.showSignature}
                 onChange={(checked) =>
                   handlePrescriptionSettingChange(
                     "showSignature",
@@ -722,9 +847,9 @@ function Settings() {
           </div>
         </div>
 
-        {/* Prescription Settings Footer */}
+        {/* Prescription Settings Actions */}
         <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div aria-live="polite">
             {successMessage && (
               <p className="text-sm font-medium text-green-600">
                 {successMessage}
@@ -765,9 +890,7 @@ function ToggleSetting({
       <input
         type="checkbox"
         checked={checked}
-        onChange={(event) =>
-          onChange(event.target.checked)
-        }
+        onChange={(event) => onChange(event.target.checked)}
         className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
       />
 

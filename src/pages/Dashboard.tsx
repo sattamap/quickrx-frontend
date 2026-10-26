@@ -6,6 +6,7 @@ import { getPatients } from "../services/patientApi";
 import { getVisits } from "../services/visitApi";
 import { getPrescriptions } from "../services/prescriptionApi";
 import { useAsyncData } from "../hooks/useAsyncData";
+import DoctorQueue from "../components/booking/DoctorQueue";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -47,8 +48,7 @@ function Dashboard() {
     return [...data.patients]
       .sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() -
-          new Date(a.createdAt).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )
       .slice(0, 4)
       .map((patient) => {
@@ -56,8 +56,7 @@ function Dashboard() {
           .filter((visit) => visit.patientId === patient.id)
           .sort(
             (a, b) =>
-              new Date(b.visitDate).getTime() -
-              new Date(a.visitDate).getTime(),
+              new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime(),
           );
 
         return {
@@ -172,26 +171,23 @@ function Dashboard() {
             key={stat.title}
             className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
           >
-            <p className="text-sm font-medium text-gray-500">
-              {stat.title}
-            </p>
+            <p className="text-sm font-medium text-gray-500">{stat.title}</p>
 
             <p className="mt-2 text-3xl font-bold text-gray-900">
               {isLoading ? "..." : stat.value}
             </p>
 
-            <p className="mt-1 text-xs text-gray-500">
-              {stat.description}
-            </p>
+            <p className="mt-1 text-xs text-gray-500">{stat.description}</p>
           </div>
         ))}
       </div>
 
+      {/* Today's Patient Queue */}
+      <DoctorQueue />
+
       {/* Quick Actions */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">
-          Quick Actions
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
 
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <button
@@ -199,9 +195,7 @@ function Dashboard() {
             onClick={() => navigate("/patients")}
             className="rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <p className="font-semibold text-gray-900">
-              Add New Patient
-            </p>
+            <p className="font-semibold text-gray-900">Add New Patient</p>
 
             <p className="mt-1 text-sm text-gray-500">
               Register a new patient in QuickRx.
@@ -213,9 +207,7 @@ function Dashboard() {
             onClick={() => navigate("/patients")}
             className="rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <p className="font-semibold text-gray-900">
-              Start New Visit
-            </p>
+            <p className="font-semibold text-gray-900">Start New Visit</p>
 
             <p className="mt-1 text-sm text-gray-500">
               Select a patient and begin a new examination.
@@ -228,9 +220,7 @@ function Dashboard() {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <div>
-            <h2 className="font-semibold text-gray-900">
-              Recent Patients
-            </h2>
+            <h2 className="font-semibold text-gray-900">Recent Patients</h2>
 
             <p className="mt-1 text-xs text-gray-500">
               Recently registered patients
@@ -252,9 +242,7 @@ function Dashboard() {
           </div>
         ) : recentPatients.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm text-gray-500">
-              No patients found.
-            </p>
+            <p className="text-sm text-gray-500">No patients found.</p>
 
             <button
               type="button"
@@ -269,25 +257,15 @@ function Dashboard() {
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
-                  <th className="px-5 py-3 font-medium">
-                    Patient ID
-                  </th>
+                  <th className="px-5 py-3 font-medium">Patient ID</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Patient
-                  </th>
+                  <th className="px-5 py-3 font-medium">Patient</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Age
-                  </th>
+                  <th className="px-5 py-3 font-medium">Age</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Gender
-                  </th>
+                  <th className="px-5 py-3 font-medium">Gender</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Last Visit
-                  </th>
+                  <th className="px-5 py-3 font-medium">Last Visit</th>
                 </tr>
               </thead>
 
@@ -308,9 +286,7 @@ function Dashboard() {
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-gray-600">
-                      {patient.age}
-                    </td>
+                    <td className="px-5 py-4 text-gray-600">{patient.age}</td>
 
                     <td className="px-5 py-4 capitalize text-gray-600">
                       {patient.gender}

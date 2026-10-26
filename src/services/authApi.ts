@@ -6,7 +6,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "doctor" | "admin";
+  role: "doctor" | "admin" | "receptionist";
   isActive: boolean;
 }
 
