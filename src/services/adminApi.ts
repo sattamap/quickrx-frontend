@@ -68,13 +68,14 @@ interface SyncJobResponse {
   job: SyncJobStatus | null;
 }
 
-export async function createSyncJob(): Promise<{
-  success: boolean;
-  job: Pick<SyncJobStatus, "id" | "status" | "createdAt">;
-}> {
-  return apiRequest("/admin/sync-jobs", {
+export async function createSyncJob() {
+  const response = await apiRequest("/admin/sync-jobs", {
     method: "POST",
   });
+
+  console.log("Create sync job API response:", response);
+
+  return response;
 }
 
 export async function getLatestSyncJob(): Promise<SyncJobResponse> {
