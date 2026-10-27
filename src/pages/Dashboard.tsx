@@ -127,6 +127,15 @@ function Dashboard() {
 
   const doctorName = user?.name?.trim() || "Doctor";
 
+  const currentHour = new Date().getHours();
+
+  const greeting =
+    currentHour < 12
+      ? "Good morning"
+      : currentHour < 17
+        ? "Good afternoon"
+        : "Good evening";
+
   if (error) {
     return (
       <div className="space-y-6">
@@ -156,7 +165,7 @@ function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          Good morning, Dr. {doctorName}
+          {greeting}, Dr. {doctorName}
         </h1>
 
         <p className="mt-1 text-sm text-gray-500">
