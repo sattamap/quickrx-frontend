@@ -6,8 +6,11 @@ import {
   getDoctors,
   updateDoctorApproval,
   updateDoctorActiveStatus,
+  createSyncJob,
+  getLatestSyncJob,
   type AdminDoctor,
   type DoctorApprovalStatus,
+  type SyncJobStatus,
 } from "../services/adminApi";
 
 import {
@@ -42,6 +45,11 @@ const AdminDashboard = () => {
     });
 
   const [isCreatingReceptionist, setIsCreatingReceptionist] = useState(false);
+  const [syncJob, setSyncJob] = useState<SyncJobStatus | null>(null);
+  const [isSyncLoading, setIsSyncLoading] = useState(false);
+  const [isCreatingSyncJob, setIsCreatingSyncJob] = useState(false);
+  const [syncError, setSyncError] = useState("");
+  const [syncNotice, setSyncNotice] = useState("");
 
   const handleLogout = async () => {
     try {
@@ -177,6 +185,50 @@ const AdminDashboard = () => {
       );
     } finally {
       setIsCreatingReceptionist(false);
+    }
+  };
+
+  const loadLatestSyncJob = useCallback(async () => {
+    setIsSyncLoading(true);
+    setSyncError("");
+
+    try {
+      const response = await getLatestSyncJob();
+      setSyncJob(response.job);
+    } catch (err) {
+      setSyncError(
+        err instanceof Error
+          ? err.message
+          : "Could not load synchronization status.",
+      );
+    } finally {
+      setIsSyncLoading(false);
+    }
+  }, []);
+
+  const handleCreateSyncJob = async () => {
+    const confirmed = window.confirm(
+      "Create a synchronization job to prepare an Atlas backup in a separate local staging database? This will not replace quickrx_archive.",
+    );
+
+    if (!confirmed) return;
+
+    setIsCreatingSyncJob(true);
+    setSyncError("");
+    setSyncNotice("");
+
+    try {
+      await createSyncJob();
+      setSyncNotice("Synchronization job created.");
+      await loadLatestSyncJob();
+    } catch (err) {
+      setSyncError(
+        err instanceof Error
+          ? err.message
+          : "Could not create synchronization job.",
+      );
+    } finally {
+      setIsCreatingSyncJob(false);
     }
   };
 
@@ -329,6 +381,102 @@ const AdminDashboard = () => {
               </button>
             </div>
           </form>
+        </section>
+
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Database Synchronization
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Prepare an Atlas backup in a separate local staging database.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void loadLatestSyncJob()}
+                disabled={isSyncLoading || isCreatingSyncJob}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Refresh Status
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleCreateSyncJob()}
+                disabled={
+                  isCreatingSyncJob ||
+                  syncJob?.status === "pending" ||
+                  syncJob?.status === "running"
+                }
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCreatingSyncJob ? "Creating Job..." : "Prepare Staging"}
+              </button>
+            </div>
+          </div>
+
+          {syncError && (
+            <p
+              role="alert"
+              className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            >
+              {syncError}
+            </p>
+          )}
+
+          {syncNotice && (
+            <p
+              role="status"
+              className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700"
+            >
+              {syncNotice}
+            </p>
+          )}
+
+          <div className="mt-5 rounded-lg bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-700">
+              Latest job status
+            </p>
+
+            {syncJob ? (
+              <>
+                <p className="mt-2 text-sm text-slate-600">
+                  Status:{" "}
+                  <span className="font-semibold capitalize">
+                    {syncJob.status}
+                  </span>
+                </p>
+                <p className="mt-1 break-all text-xs text-slate-500">
+                  Job ID: {syncJob.id}
+                </p>
+
+                {syncJob.result && (
+                  <div className="mt-3 space-y-1 text-sm text-slate-600">
+                    <p>Collections: {syncJob.result.collections ?? "—"}</p>
+                    <p>Documents: {syncJob.result.documents ?? "—"}</p>
+                    <p>
+                      Prepared database:{" "}
+                      {syncJob.result.preparedDatabase ?? "—"}
+                    </p>
+                  </div>
+                )}
+
+                {syncJob.errorMessage && (
+                  <p className="mt-3 text-sm text-red-700">
+                    {syncJob.errorMessage}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">
+                No synchronization job found.
+              </p>
+            )}
+          </div>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
