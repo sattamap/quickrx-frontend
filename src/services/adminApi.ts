@@ -62,20 +62,24 @@ export interface SyncJobStatus {
   result?: SyncJobResult | null;
   errorMessage?: string | null;
 }
+interface CreateSyncJobResponse {
+  success: boolean;
+  job: Pick<SyncJobStatus, "id" | "status" | "createdAt">;
+}
 
 interface SyncJobResponse {
   success: boolean;
   job: SyncJobStatus | null;
 }
 
-export async function createSyncJob() {
+export async function createSyncJob(): Promise<CreateSyncJobResponse> {
   const response = await apiRequest("/admin/sync-jobs", {
     method: "POST",
   });
 
   console.log("Create sync job API response:", response);
 
-  return response;
+  return response as CreateSyncJobResponse;
 }
 
 export async function getLatestSyncJob(): Promise<SyncJobResponse> {
