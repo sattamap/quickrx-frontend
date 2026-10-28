@@ -220,12 +220,16 @@ const AdminDashboard = () => {
     try {
       const response = await createSyncJob();
 
-      // Validate the response before accessing its properties.
-      if (!response?.success || !response?.job?.id) {
+      if (!response?.job?.id) {
         throw new Error("The API did not return a valid synchronization job.");
       }
 
-      setSyncJob(response.job);
+      setSyncJob({
+        ...response.job,
+        result: null,
+        errorMessage: null,
+      });
+
       setSyncNotice("Synchronization job created.");
     } catch (err) {
       setSyncError(
