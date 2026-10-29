@@ -206,9 +206,45 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshStatus = async () => {
+      try {
+        const response = await getLatestSyncJob();
+
+        if (!cancelled) {
+          setSyncJob(response.job);
+          setSyncError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSyncError(
+            err instanceof Error
+              ? err.message
+              : "Could not load synchronization status.",
+          );
+        }
+      }
+    };
+
+    void refreshStatus();
+
+    const intervalId = window.setInterval(() => {
+      void refreshStatus();
+    }, 10_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   const handleCreateSyncJob = async () => {
     const confirmed = window.confirm(
-      "Create a synchronization job to prepare an Atlas backup in a separate local staging database? This will not replace quickrx_archive.",
+      "Transfer the latest QuickRx Atlas data to your local PC? " +
+        "The local sync agent must be running. " +
+        "A separate staging database will be prepared; quickrx_archive will not be replaced.",
     );
 
     if (!confirmed) return;
@@ -400,18 +436,23 @@ const AdminDashboard = () => {
                 Database Synchronization
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Prepare an Atlas backup in a separate local staging database.
+                Transfer QuickRx Atlas data to your local PC using the local
+                sync agent.
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Creates a separate staging database. Existing quickrx_archive is
+                not replaced.
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => void loadLatestSyncJob()}
                 disabled={isSyncLoading || isCreatingSyncJob}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Refresh Status
+                {isSyncLoading ? "Refreshing..." : "Refresh Status"}
               </button>
 
               <button
@@ -424,7 +465,12 @@ const AdminDashboard = () => {
                 }
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isCreatingSyncJob ? "Creating Job..." : "Prepare Staging"}
+                {isCreatingSyncJob
+                  ? "Creating Transfer..."
+                  : syncJob?.status === "pending" ||
+                      syncJob?.status === "running"
+                    ? "Transfer in Progress..."
+                    : "Transfer Atlas → Local"}
               </button>
             </div>
           </div>
@@ -449,7 +495,7 @@ const AdminDashboard = () => {
 
           <div className="mt-5 rounded-lg bg-slate-50 p-4">
             <p className="text-sm font-medium text-slate-700">
-              Latest job status
+              Latest transfer status
             </p>
 
             {syncJob ? (
@@ -460,6 +506,7 @@ const AdminDashboard = () => {
                     {syncJob.status}
                   </span>
                 </p>
+
                 <p className="mt-1 break-all text-xs text-slate-500">
                   Job ID: {syncJob.id}
                 </p>
@@ -483,9 +530,16 @@ const AdminDashboard = () => {
               </>
             ) : (
               <p className="mt-2 text-sm text-slate-500">
-                No synchronization job found.
+                {isSyncLoading
+                  ? "Loading transfer status..."
+                  : "No synchronization job found."}
               </p>
             )}
+
+            <p className="mt-3 text-xs text-slate-500">
+              Keep the local sync agent running while the transfer is in
+              progress.
+            </p>
           </div>
         </section>
 
