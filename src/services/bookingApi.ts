@@ -60,3 +60,18 @@ export const getTodayBookings = async (): Promise<Booking[]> => {
 
 export const getMyBookingsByDate = async (date: string): Promise<Booking[]> =>
   apiRequest<Booking[]>(`/bookings/mine?date=${encodeURIComponent(date)}`);
+
+/**
+ * Fetch the authenticated doctor's bookings for a selected date.
+ */
+export const getDoctorBookingsByDate = async (
+  date: string,
+): Promise<Booking[]> => {
+  if (!date) {
+    throw new Error("Please select a booking date.");
+  }
+
+  return apiRequest<Booking[]>(
+    `/bookings/date?date=${encodeURIComponent(date)}`,
+  );
+};
