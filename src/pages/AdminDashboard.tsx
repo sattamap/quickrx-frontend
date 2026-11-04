@@ -15,7 +15,10 @@ import {
 
 import {
   createReceptionist,
+  getReceptionists,
+  deleteReceptionist,
   type CreateReceptionistInput,
+  type Receptionist,
 } from "../services/receptionistApi";
 
 const filters: Array<{
@@ -45,6 +48,13 @@ const AdminDashboard = () => {
     });
 
   const [isCreatingReceptionist, setIsCreatingReceptionist] = useState(false);
+  const [receptionists, setReceptionists] = useState<Receptionist[]>([]);
+  const [isReceptionistsLoading, setIsReceptionistsLoading] = useState(true);
+  const [busyReceptionistId, setBusyReceptionistId] = useState<string | null>(
+    null,
+  );
+  const [receptionistError, setReceptionistError] = useState("");
+  const [receptionistNotice, setReceptionistNotice] = useState("");
   const [syncJob, setSyncJob] = useState<SyncJobStatus | null>(null);
   const [isSyncLoading, setIsSyncLoading] = useState(false);
   const [isCreatingSyncJob, setIsCreatingSyncJob] = useState(false);
@@ -103,6 +113,56 @@ const AdminDashboard = () => {
     };
   }, [filter]);
 
+  const loadReceptionists = useCallback(async () => {
+    try {
+      const result = await getReceptionists();
+
+      setReceptionists(result);
+      setReceptionistError("");
+    } catch (err) {
+      setReceptionistError(
+        err instanceof Error
+          ? err.message
+          : "Could not load receptionist accounts.",
+      );
+    } finally {
+      setIsReceptionistsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchReceptionists = async () => {
+      try {
+        const result = await getReceptionists();
+
+        if (!cancelled) {
+          setReceptionists(result);
+          setReceptionistError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setReceptionistError(
+            err instanceof Error
+              ? err.message
+              : "Could not load receptionist accounts.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsReceptionistsLoading(false);
+        }
+      }
+    };
+
+    void fetchReceptionists();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleApproval = async (
     doctor: AdminDoctor,
     approvalStatus: "approved" | "rejected",
@@ -158,8 +218,8 @@ const AdminDashboard = () => {
   };
 
   const handleCreateReceptionist = async () => {
-    setError("");
-    setNotice("");
+    setReceptionistError("");
+    setReceptionistNotice("");
 
     setIsCreatingReceptionist(true);
 
@@ -170,21 +230,57 @@ const AdminDashboard = () => {
         password: receptionistForm.password,
       });
 
-      setNotice(`Receptionist account created for ${receptionist.name}.`);
+      setReceptionistNotice(
+        `Receptionist account created for ${receptionist.name}.`,
+      );
 
       setReceptionistForm({
         name: "",
         email: "",
         password: "",
       });
+
+      await loadReceptionists();
     } catch (err: unknown) {
-      setError(
+      setReceptionistError(
         err instanceof Error
           ? err.message
           : "Unable to create receptionist account.",
       );
     } finally {
       setIsCreatingReceptionist(false);
+    }
+  };
+
+  const handleDeleteReceptionist = async (receptionist: Receptionist) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete the receptionist account for ${receptionist.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    setBusyReceptionistId(receptionist.id);
+    setReceptionistError("");
+    setReceptionistNotice("");
+
+    try {
+      await deleteReceptionist(receptionist.id);
+
+      setReceptionists((current) =>
+        current.filter((item) => item.id !== receptionist.id),
+      );
+
+      setReceptionistNotice(
+        `${receptionist.name}'s account was deleted successfully.`,
+      );
+    } catch (err) {
+      setReceptionistError(
+        err instanceof Error
+          ? err.message
+          : "Could not delete receptionist account.",
+      );
+    } finally {
+      setBusyReceptionistId(null);
     }
   };
 
@@ -427,6 +523,124 @@ const AdminDashboard = () => {
               </button>
             </div>
           </form>
+        </section>
+
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Receptionist Management
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                View and manage receptionist accounts.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsReceptionistsLoading(true);
+                setReceptionistError("");
+                void loadReceptionists();
+              }}
+              disabled={isReceptionistsLoading || busyReceptionistId !== null}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isReceptionistsLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+
+          {receptionistNotice && (
+            <p
+              role="status"
+              className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700"
+            >
+              {receptionistNotice}
+            </p>
+          )}
+
+          {receptionistError && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            >
+              {receptionistError}
+            </p>
+          )}
+
+          {isReceptionistsLoading ? (
+            <p className="py-8 text-center text-slate-500">
+              Loading receptionist accounts...
+            </p>
+          ) : receptionists.length === 0 ? (
+            <p className="py-8 text-center text-slate-500">
+              No receptionist accounts found.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[650px] text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Receptionist</th>
+                    <th className="px-4 py-3 font-semibold">Created</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {receptionists.map((receptionist) => (
+                    <tr key={receptionist.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-4">
+                        <p className="font-medium text-slate-900">
+                          {receptionist.name}
+                        </p>
+                        <p className="mt-1 text-slate-500">
+                          {receptionist.email}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4 text-slate-600">
+                        {receptionist.createdAt &&
+                        !Number.isNaN(Date.parse(receptionist.createdAt))
+                          ? new Date(
+                              receptionist.createdAt,
+                            ).toLocaleDateString()
+                          : "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            receptionist.isActive
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-red-50 text-red-700"
+                          }`}
+                        >
+                          {receptionist.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          disabled={busyReceptionistId !== null}
+                          onClick={() =>
+                            void handleDeleteReceptionist(receptionist)
+                          }
+                          className="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busyReceptionistId === receptionist.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
