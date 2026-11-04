@@ -16,7 +16,7 @@ import {
 import {
   createReceptionist,
   getReceptionists,
-  deleteReceptionist,
+  updateReceptionistStatus,
   type CreateReceptionistInput,
   type Receptionist,
 } from "../services/receptionistApi";
@@ -252,32 +252,46 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteReceptionist = async (receptionist: Receptionist) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete the receptionist account for ${receptionist.name}?`,
-    );
+  const handleToggleReceptionistStatus = async (receptionist: Receptionist) => {
+    const nextStatus = !receptionist.isActive;
 
-    if (!confirmed) return;
+    // Ask for confirmation before deactivation.
+    if (
+      !nextStatus &&
+      !window.confirm(
+        `Are you sure you want to deactivate ${receptionist.name}'s account? They will no longer be able to log in.`,
+      )
+    ) {
+      return;
+    }
 
     setBusyReceptionistId(receptionist.id);
     setReceptionistError("");
     setReceptionistNotice("");
 
     try {
-      await deleteReceptionist(receptionist.id);
+      const updatedReceptionist = await updateReceptionistStatus(
+        receptionist.id,
+        nextStatus,
+      );
 
+      // Update the receptionist list without reloading the page.
       setReceptionists((current) =>
-        current.filter((item) => item.id !== receptionist.id),
+        current.map((item) =>
+          item.id === updatedReceptionist.id ? updatedReceptionist : item,
+        ),
       );
 
       setReceptionistNotice(
-        `${receptionist.name}'s account was deleted successfully.`,
+        `${receptionist.name}'s account was ${
+          nextStatus ? "activated" : "deactivated"
+        } successfully.`,
       );
     } catch (err) {
       setReceptionistError(
         err instanceof Error
           ? err.message
-          : "Could not delete receptionist account.",
+          : "Could not update receptionist account status.",
       );
     } finally {
       setBusyReceptionistId(null);
@@ -626,13 +640,19 @@ const AdminDashboard = () => {
                           type="button"
                           disabled={busyReceptionistId !== null}
                           onClick={() =>
-                            void handleDeleteReceptionist(receptionist)
+                            void handleToggleReceptionistStatus(receptionist)
                           }
-                          className="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className={`rounded-md px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                            receptionist.isActive
+                              ? "bg-red-600 hover:bg-red-700"
+                              : "bg-emerald-600 hover:bg-emerald-700"
+                          }`}
                         >
                           {busyReceptionistId === receptionist.id
-                            ? "Deleting..."
-                            : "Delete"}
+                            ? "Updating..."
+                            : receptionist.isActive
+                              ? "Deactivate"
+                              : "Activate"}
                         </button>
                       </td>
                     </tr>

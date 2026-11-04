@@ -1,4 +1,3 @@
-
 import { apiRequest } from "./apiClient";
 
 export interface CreateReceptionistInput {
@@ -19,13 +18,10 @@ export interface Receptionist {
 export const createReceptionist = async (
   data: CreateReceptionistInput,
 ): Promise<Receptionist> => {
-  const receptionist = await apiRequest<Receptionist>(
-    "/admin/receptionists",
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  );
+  const receptionist = await apiRequest<Receptionist>("/admin/receptionists", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 
   if (!receptionist?.id) {
     throw new Error("Receptionist account creation could not be confirmed.");
@@ -47,16 +43,25 @@ export const getReceptionists = async (): Promise<Receptionist[]> => {
   return receptionists;
 };
 
-// Permanently delete a receptionist account
-export const deleteReceptionist = async (id: string): Promise<void> => {
+export const updateReceptionistStatus = async (
+  id: string,
+  isActive: boolean,
+): Promise<Receptionist> => {
   if (!id) {
     throw new Error("A valid receptionist ID is required.");
   }
 
-  await apiRequest(
-    `/admin/receptionists/${encodeURIComponent(id)}`,
+  const updatedReceptionist = await apiRequest<Receptionist>(
+    `/admin/receptionists/${encodeURIComponent(id)}/status`,
     {
-      method: "DELETE",
+      method: "PATCH",
+      body: JSON.stringify({ isActive }),
     },
   );
+
+  if (!updatedReceptionist?.id || updatedReceptionist.isActive !== isActive) {
+    throw new Error("Could not confirm the receptionist status update.");
+  }
+
+  return updatedReceptionist;
 };
