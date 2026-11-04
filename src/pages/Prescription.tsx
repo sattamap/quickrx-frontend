@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,11 +9,50 @@ import { useAsyncData } from "../hooks/useAsyncData";
 
 type DateFilter = "all" | "today" | "7days" | "30days";
 
+// Convert a date or ISO timestamp into a local YYYY-MM-DD key.
+function getLocalDateKey(
+  value: string | Date | null | undefined,
+): string | null {
+  if (!value) return null;
+
+  let date: Date;
+
+  // Handle date-only strings without UTC timezone conversion.
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    date = new Date(year, month - 1, day);
+  } else {
+    date = new Date(value);
+  }
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+// Display dates in dd/mm/yy format.
+function formatDate(
+  value: string | Date | null | undefined,
+): string {
+  const dateKey = getLocalDateKey(value);
+
+  if (!dateKey) return "—";
+
+  const [year, month, day] = dateKey.split("-");
+
+  return `${day}/${month}/${year.slice(-2)}`;
+}
+
 function Prescription() {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [selectedDate, setSelectedDate] = useState("");
 
   const { data, isLoading, error } = useAsyncData(async () => {
     const [prescriptions, patients, visits] = await Promise.all([
@@ -28,54 +68,66 @@ function Prescription() {
     if (!data) return [];
 
     const search = searchTerm.trim().toLowerCase();
+
     const today = new Date();
+    const todayKey = getLocalDateKey(today);
+
+    const todayDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+
+    const daysAgo = dateFilter === "7days" ? 7 : 30;
+
+    const startDate = new Date(todayDate);
+    startDate.setDate(startDate.getDate() - (daysAgo - 1));
+
+    const startDateKey = getLocalDateKey(startDate);
 
     return data.prescriptions.filter((prescription) => {
-      // Search filter
+      // Find the associated patient.
       const patient = data.patients.find(
-        (currentPatient) => currentPatient.id === prescription.patientId,
+        (currentPatient) =>
+          currentPatient.id === prescription.patientId,
       );
 
+      // Search by patient name or patient ID.
       const matchesSearch =
         !search ||
-        patient?.name.toLowerCase().includes(search) ||
-        patient?.patientId.toLowerCase().includes(search);
+        patient?.name?.toLowerCase().includes(search) ||
+        patient?.patientId?.toLowerCase().includes(search);
 
-      if (!matchesSearch) {
-        return false;
-      }
+      if (!matchesSearch) return false;
 
-      // Date filter
-      if (dateFilter === "all") {
-        return true;
-      }
-
-      const prescriptionDate = new Date(
-        `${prescription.prescriptionDate}T00:00:00`,
+      // Get prescription date in a consistent format.
+      const prescriptionDateKey = getLocalDateKey(
+        prescription.prescriptionDate,
       );
 
-      if (Number.isNaN(prescriptionDate.getTime())) {
-        return false;
+      if (!prescriptionDateKey) return false;
+
+      // Exact date search takes priority over quick filters.
+      if (selectedDate) {
+        return prescriptionDateKey === selectedDate;
       }
 
-      const todayDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-      );
+      // Show all prescriptions.
+      if (dateFilter === "all") return true;
 
+      // Today's prescriptions.
       if (dateFilter === "today") {
-        return prescriptionDate.getTime() === todayDate.getTime();
+        return prescriptionDateKey === todayKey;
       }
 
-      const daysAgo = dateFilter === "7days" ? 7 : 30;
-
-      const startDate = new Date(todayDate);
-      startDate.setDate(startDate.getDate() - (daysAgo - 1));
-
-      return prescriptionDate >= startDate;
+      // Last 7 or 30 days, including today.
+      // Future-dated prescriptions are excluded.
+      return (
+        prescriptionDateKey >= (startDateKey ?? "") &&
+        prescriptionDateKey <= (todayKey ?? "")
+      );
     });
-  }, [searchTerm, dateFilter, data]);
+  }, [searchTerm, dateFilter, selectedDate, data]);
 
   return (
     <div className="space-y-6">
@@ -93,7 +145,7 @@ function Prescription() {
       {/* Filters */}
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          {/* Search */}
+          {/* Patient Search */}
           <div>
             <label
               htmlFor="prescription-search"
@@ -112,33 +164,52 @@ function Prescription() {
             />
           </div>
 
-          {/* Date Filter */}
-          <div>
-            <label
-              htmlFor="prescription-date-filter"
-              className="mb-1.5 block text-sm font-medium text-gray-700"
-            >
-              Date
-            </label>
+          {/* Date Filters */}
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label
+                htmlFor="prescription-date-filter"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
+              >
+                Quick Filter
+              </label>
 
-            <select
-              id="prescription-date-filter"
-              value={dateFilter}
-              onChange={(event) =>
-                setDateFilter(event.target.value as DateFilter)
-              }
-              className="w-full min-w-[180px] rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="all">All prescriptions</option>
-              <option value="today">Today</option>
-              <option value="7days">Last 7 days</option>
-              <option value="30days">Last 30 days</option>
-            </select>
+              <select
+                id="prescription-date-filter"
+                value={dateFilter}
+                onChange={(event) =>
+                  setDateFilter(event.target.value as DateFilter)
+                }
+                className="w-full min-w-[170px] rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="all">All prescriptions</option>
+                <option value="today">Today</option>
+                <option value="7days">Last 7 days</option>
+                <option value="30days">Last 30 days</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="prescription-specific-date"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
+              >
+                Specific Date
+              </label>
+
+              <input
+                id="prescription-specific-date"
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
           </div>
         </div>
 
         {/* Active Filter Summary */}
-        {(searchTerm || dateFilter !== "all") && (
+        {(searchTerm || dateFilter !== "all" || selectedDate) && (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
             <span className="text-sm text-gray-500">
               Showing {filteredPrescriptions.length}{" "}
@@ -152,6 +223,7 @@ function Prescription() {
               onClick={() => {
                 setSearchTerm("");
                 setDateFilter("all");
+                setSelectedDate("");
               }}
               className="text-sm font-medium text-blue-600 hover:text-blue-700"
             >
@@ -198,7 +270,7 @@ function Prescription() {
             </h3>
 
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || dateFilter !== "all"
+              {searchTerm || dateFilter !== "all" || selectedDate
                 ? "Try changing your search or date filter."
                 : "Saved prescriptions will appear here."}
             </p>
@@ -273,12 +345,12 @@ function Prescription() {
 
                       {/* Prescription Date */}
                       <td className="px-5 py-4 text-sm text-gray-700">
-                        {prescription.prescriptionDate}
+                        {formatDate(prescription.prescriptionDate)}
                       </td>
 
                       {/* Visit Date */}
                       <td className="px-5 py-4 text-sm text-gray-700">
-                        {visit?.visitDate ?? "—"}
+                        {formatDate(visit?.visitDate)}
                       </td>
 
                       {/* Medicine Count */}
