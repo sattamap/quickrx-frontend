@@ -130,12 +130,13 @@ function Dashboard() {
   const currentHour = new Date().getHours();
 
   const greeting =
-    currentHour < 12
+    currentHour >= 5 && currentHour < 12
       ? "Good morning"
-      : currentHour < 17
+      : currentHour >= 12 && currentHour < 17
         ? "Good afternoon"
-        : "Good evening";
-
+        : currentHour >= 17 && currentHour < 20
+          ? "Good evening"
+          : "Good night";
   if (error) {
     return (
       <div className="space-y-6">
