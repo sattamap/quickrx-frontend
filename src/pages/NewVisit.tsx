@@ -375,7 +375,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
 
             {/* Height */}
             <div>
-              <div className="mb-1.5 flex items-center justify-between gap-2">
+              <div className="mb-1.5 flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">
                   Height
                 </label>
@@ -385,7 +385,7 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                   onChange={(event) =>
                     setHeightUnit(event.target.value as "cm" | "ft-in")
                   }
-                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500"
+                  className="rounded-md border border-gray-300 bg-white px-1 py-1 text-xs outline-none focus:border-blue-500"
                 >
                   <option value="cm">cm</option>
                   <option value="ft-in">ft / in</option>
