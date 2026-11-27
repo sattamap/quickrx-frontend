@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
@@ -69,9 +68,7 @@ function PrescriptionPreview() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <p className="text-sm text-gray-500">
-            Loading prescription...
-          </p>
+          <p className="text-sm text-gray-500">Loading prescription...</p>
         </div>
       </div>
     );
@@ -172,24 +169,20 @@ function PrescriptionPreview() {
    * The fallbacks preserve the existing footer for older settings records
    * that might not yet contain the new fields.
    */
-  const showChamberFooter =
-    prescriptionSettings.showChamberFooter !== false;
+  const showChamberFooter = prescriptionSettings.showChamberFooter !== false;
 
   const footerHeading =
-    prescriptionSettings.footerHeading?.trim() ||
-    "রোগী দেখার সময় ও সিরিয়াল";
+    prescriptionSettings.footerHeading?.trim() || "রোগী দেখার সময় ও সিরিয়াল";
 
   const visitingHours =
     prescriptionSettings.visitingHours?.trim() ||
     "বিকাল ৫টা থেকে রাত ৯টা পর্যন্ত";
 
   const serialBookingPhone =
-    prescriptionSettings.serialBookingPhone?.trim() ||
-    "০১৯২১৯০৯১১";
+    prescriptionSettings.serialBookingPhone?.trim() || "০১৯২১৯০৯১১";
 
   const weeklyClosingDay =
-    prescriptionSettings.weeklyClosingDay?.trim() ||
-    "প্রতি শুক্রবার";
+    prescriptionSettings.weeklyClosingDay?.trim() || "প্রতি শুক্রবার";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 print:max-w-none">
@@ -313,9 +306,7 @@ function PrescriptionPreview() {
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-b border-teal-100 bg-white/65 py-3 text-xs sm:grid-cols-3 sm:gap-x-5 sm:text-sm lg:grid-cols-4">
           <p className="min-w-0 break-words">
             <span className="text-gray-500">Patient:</span>{" "}
-            <span className="font-semibold text-gray-900">
-              {patient.name}
-            </span>
+            <span className="font-semibold text-gray-900">{patient.name}</span>
           </p>
 
           {prescriptionSettings.showPatientId && (
@@ -429,8 +420,8 @@ function PrescriptionPreview() {
                         {prescription.spectaclePrescription.right.axis || "—"}
                       </td>
                       <td className="py-1 text-gray-700">
-                        {prescription.spectaclePrescription.right.visualAcuity ||
-                          "—"}
+                        {prescription.spectaclePrescription.right
+                          .visualAcuity || "—"}
                       </td>
                     </tr>
 
@@ -531,9 +522,7 @@ function PrescriptionPreview() {
                 ))}
               </ol>
             ) : (
-              <p className="mt-1 text-xs text-gray-500">
-                No medicines added.
-              </p>
+              <p className="mt-1 text-xs text-gray-500">No medicines added.</p>
             )}
           </div>
         </div>
@@ -610,8 +599,11 @@ function PrescriptionPreview() {
                 </p>
 
                 {doctorProfile?.qualification && (
-                  <p className="text-[11px] text-gray-500">
-                    {doctorProfile.qualification}
+                  <p className="whitespace-pre-line text-[11px] text-gray-500">
+                    {doctorProfile.qualification.replace(
+                      ", BCS (Health)",
+                      ",\nBCS (Health)",
+                    )}
                   </p>
                 )}
 

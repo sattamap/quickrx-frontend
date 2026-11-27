@@ -3,10 +3,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getPatientById } from "../services/patientApi.ts";
-import {
-  getVisitById,
-  updateVisit,
-} from "../services/visitApi.ts";
+import { getVisitById, updateVisit } from "../services/visitApi.ts";
 
 import { useAsyncData } from "../hooks/useAsyncData";
 
@@ -14,40 +11,32 @@ import type { CreateVisitInput } from "../types/visit.ts";
 import type { Patient } from "../types/patient.ts";
 import type { Visit } from "../types/visit.ts";
 
-import {
-  showError,
-  showSuccess,
-} from "../utils/alert";
+import { showError, showSuccess } from "../utils/alert";
 
 function EditVisit() {
   const { patientId, visitId } = useParams();
 
-  const { data, isLoading, error } = useAsyncData(
-    async () => {
-      if (!patientId || !visitId) {
-        return undefined;
-      }
+  const { data, isLoading, error } = useAsyncData(async () => {
+    if (!patientId || !visitId) {
+      return undefined;
+    }
 
-      const [patient, visit] = await Promise.all([
-        getPatientById(patientId),
-        getVisitById(visitId),
-      ]);
+    const [patient, visit] = await Promise.all([
+      getPatientById(patientId),
+      getVisitById(visitId),
+    ]);
 
-      if (!patient || !visit) {
-        return undefined;
-      }
+    if (!patient || !visit) {
+      return undefined;
+    }
 
-      return { patient, visit };
-    },
-    [patientId, visitId],
-  );
+    return { patient, visit };
+  }, [patientId, visitId]);
 
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <p className="text-sm text-gray-500">
-          Loading visit...
-        </p>
+        <p className="text-sm text-gray-500">Loading visit...</p>
       </div>
     );
   }
@@ -57,26 +46,18 @@ function EditVisit() {
       <div className="space-y-4">
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <h1 className="text-lg font-semibold text-red-800">
-            {error
-              ? "Unable to load visit"
-              : "Visit not found"}
+            {error ? "Unable to load visit" : "Visit not found"}
           </h1>
 
           <p className="mt-1 text-sm text-red-600">
-            {error ??
-              "The visit record could not be found."}
+            {error ?? "The visit record could not be found."}
           </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <EditVisitForm
-      patient={data.patient}
-      visit={data.visit}
-    />
-  );
+  return <EditVisitForm patient={data.patient} visit={data.visit} />;
 }
 
 interface EditVisitFormProps {
@@ -84,19 +65,14 @@ interface EditVisitFormProps {
   visit: Visit;
 }
 
-function EditVisitForm({
-  patient,
-  visit,
-}: EditVisitFormProps) {
+function EditVisitForm({ patient, visit }: EditVisitFormProps) {
   const navigate = useNavigate();
 
-  const [isSaving, setIsSaving] =
-    useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [chiefComplaint, setChiefComplaint] =
-    useState(
-      visit.chiefComplaint ?? "",
-    );
+  const [chiefComplaint, setChiefComplaint] = useState(
+    visit.chiefComplaint ?? "",
+  );
 
   const [vitalSigns, setVitalSigns] = useState({
     weight:
@@ -109,98 +85,106 @@ function EditVisitForm({
       visit.vitalSigns?.height !== undefined
         ? String(visit.vitalSigns.height)
         : "",
-    bloodPressure:
-      visit.vitalSigns?.bloodPressure ?? "",
+    bloodPressure: visit.vitalSigns?.bloodPressure ?? "",
   });
 
-  const [diagnosis, setDiagnosis] =
-    useState(visit.diagnosis ?? "");
+  const [heightUnit, setHeightUnit] = useState<"cm" | "ft-in">("cm");
 
-  const [clinicalNotes, setClinicalNotes] =
-    useState(
-      visit.clinicalNotes ?? "",
-    );
+  const [heightFeet, setHeightFeet] = useState("");
+  const [heightInches, setHeightInches] = useState("");
 
-  const [visualAcuity, setVisualAcuity] =
-    useState({
-      right: {
-        unaided:
-          visit.examination.visualAcuity.right
-            .unaided ?? "",
-        aided:
-          visit.examination.visualAcuity.right
-            .aided ?? "",
-      },
-      left: {
-        unaided:
-          visit.examination.visualAcuity.left
-            .unaided ?? "",
-        aided:
-          visit.examination.visualAcuity.left
-            .aided ?? "",
-      },
-    });
+  const [diagnosis, setDiagnosis] = useState(visit.diagnosis ?? "");
 
-  const [refraction, setRefraction] =
-    useState({
-      right: {
-        sph:
-          visit.examination.refraction.right
-            .sph ?? "",
-        cyl:
-          visit.examination.refraction.right
-            .cyl ?? "",
-        axis:
-          visit.examination.refraction.right
-            .axis ?? "",
-        visualAcuity:
-          visit.examination.refraction.right
-            .visualAcuity ?? "",
-      },
-      left: {
-        sph:
-          visit.examination.refraction.left
-            .sph ?? "",
-        cyl:
-          visit.examination.refraction.left
-            .cyl ?? "",
-        axis:
-          visit.examination.refraction.left
-            .axis ?? "",
-        visualAcuity:
-          visit.examination.refraction.left
-            .visualAcuity ?? "",
-      },
-    });
+  const [clinicalNotes, setClinicalNotes] = useState(visit.clinicalNotes ?? "");
+
+  const [visualAcuity, setVisualAcuity] = useState({
+    right: {
+      unaided: visit.examination.visualAcuity.right.unaided ?? "",
+      aided: visit.examination.visualAcuity.right.aided ?? "",
+    },
+    left: {
+      unaided: visit.examination.visualAcuity.left.unaided ?? "",
+      aided: visit.examination.visualAcuity.left.aided ?? "",
+    },
+  });
+
+  const [refraction, setRefraction] = useState({
+    right: {
+      sph: visit.examination.refraction.right.sph ?? "",
+      cyl: visit.examination.refraction.right.cyl ?? "",
+      axis: visit.examination.refraction.right.axis ?? "",
+      visualAcuity: visit.examination.refraction.right.visualAcuity ?? "",
+    },
+    left: {
+      sph: visit.examination.refraction.left.sph ?? "",
+      cyl: visit.examination.refraction.left.cyl ?? "",
+      axis: visit.examination.refraction.left.axis ?? "",
+      visualAcuity: visit.examination.refraction.left.visualAcuity ?? "",
+    },
+  });
 
   const [iop, setIop] = useState({
-    right:
-      visit.examination.iop.right ?? "",
-    left:
-      visit.examination.iop.left ?? "",
+    right: visit.examination.iop.right ?? "",
+    left: visit.examination.iop.left ?? "",
   });
 
-  const [eyeExamination, setEyeExamination] =
-    useState({
-      anteriorSegment: {
-        right:
-          visit.examination.anteriorSegment
-            .right ?? "",
-        left:
-          visit.examination.anteriorSegment
-            .left ?? "",
-      },
-      fundus: {
-        right:
-          visit.examination.fundus.right ?? "",
-        left:
-          visit.examination.fundus.left ?? "",
-      },
-    });
+  const [eyeExamination, setEyeExamination] = useState({
+    anteriorSegment: {
+      right: visit.examination.anteriorSegment.right ?? "",
+      left: visit.examination.anteriorSegment.left ?? "",
+    },
+    fundus: {
+      right: visit.examination.fundus.right ?? "",
+      left: visit.examination.fundus.left ?? "",
+    },
+  });
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleHeightUnitChange = (nextUnit: "cm" | "ft-in") => {
+    if (nextUnit === heightUnit) return;
+
+    if (nextUnit === "ft-in") {
+      const cm = Number(vitalSigns.height);
+
+      if (vitalSigns.height.trim() === "" || !Number.isFinite(cm)) {
+        setHeightFeet("");
+        setHeightInches("");
+      } else {
+        const totalInches = cm / 2.54;
+        let feet = Math.floor(totalInches);
+        let inches = Number((totalInches - feet * 12).toFixed(2));
+
+        // Correct rounding that produces 12 inches.
+        if (inches >= 12) {
+          feet += 1;
+          inches = 0;
+        }
+
+        setHeightFeet(String(feet));
+        setHeightInches(String(inches));
+      }
+    } else {
+      if (heightFeet.trim() === "" && heightInches.trim() === "") {
+        setVitalSigns((current) => ({
+          ...current,
+          height: "",
+        }));
+      } else {
+        const feet = heightFeet.trim() === "" ? 0 : Number(heightFeet);
+        const inches = heightInches.trim() === "" ? 0 : Number(heightInches);
+
+        const heightInCm = feet * 30.48 + inches * 2.54;
+
+        setVitalSigns((current) => ({
+          ...current,
+          height: heightInCm.toFixed(2),
+        }));
+      }
+    }
+
+    setHeightUnit(nextUnit);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!visit.id) {
@@ -211,95 +195,103 @@ function EditVisitForm({
     }
 
     if (!chiefComplaint.trim()) {
-      await showError(
-        "Chief complaint is required.",
-      );
+      await showError("Chief complaint is required.");
+      return;
+    }
+
+    let heightInCm: number | null = null;
+
+    if (heightUnit === "cm") {
+      heightInCm =
+        vitalSigns.height.trim() === "" ? null : Number(vitalSigns.height);
+    } else {
+      const feet = heightFeet.trim() === "" ? 0 : Number(heightFeet);
+
+      const inches = heightInches.trim() === "" ? 0 : Number(heightInches);
+
+      if (
+        !Number.isInteger(feet) ||
+        !Number.isFinite(inches) ||
+        feet < 0 ||
+        feet > 9 ||
+        inches < 0 ||
+        inches >= 12
+      ) {
+        await showError("Please enter a valid height in feet and inches.");
+        return;
+      }
+
+      if (heightFeet.trim() !== "" || heightInches.trim() !== "") {
+        heightInCm = Number((feet * 30.48 + inches * 2.54).toFixed(2));
+      }
+    }
+
+    if (
+      heightInCm !== null &&
+      (!Number.isFinite(heightInCm) || heightInCm <= 0 || heightInCm > 300)
+    ) {
+      await showError("Please enter a valid height (maximum 300 cm).");
       return;
     }
 
     setIsSaving(true);
 
-    const updatedVisit: Partial<CreateVisitInput> =
-      {
-        patientId: patient.id,
-        ageAtVisit: visit.ageAtVisit,
-        visitDate: visit.visitDate,
+    const updatedVisit: Partial<CreateVisitInput> = {
+      patientId: patient.id,
+      ageAtVisit: visit.ageAtVisit,
+      visitDate: visit.visitDate,
 
-        chiefComplaint:
-          chiefComplaint.trim(),
+      chiefComplaint: chiefComplaint.trim(),
 
-        vitalSigns: {
-          weight:
-            vitalSigns.weight.trim() === ""
-              ? null
-              : Number(vitalSigns.weight),
+      vitalSigns: {
+        weight:
+          vitalSigns.weight.trim() === "" ? null : Number(vitalSigns.weight),
 
-          height:
-            vitalSigns.height.trim() === ""
-              ? null
-              : Number(vitalSigns.height),
+        height: heightInCm,
 
-          bloodPressure:
-            vitalSigns.bloodPressure.trim(),
+        bloodPressure: vitalSigns.bloodPressure.trim(),
+      },
+
+      examination: {
+        visualAcuity: {
+          right: visualAcuity.right,
+          left: visualAcuity.left,
         },
 
-        examination: {
-          visualAcuity: {
-            right: visualAcuity.right,
-            left: visualAcuity.left,
-          },
-
-          refraction: {
-            right: refraction.right,
-            left: refraction.left,
-          },
-
-          iop: {
-            right: iop.right,
-            left: iop.left,
-          },
-
-          anteriorSegment: {
-            right:
-              eyeExamination.anteriorSegment
-                .right,
-            left:
-              eyeExamination.anteriorSegment
-                .left,
-          },
-
-          fundus: {
-            right:
-              eyeExamination.fundus.right,
-            left:
-              eyeExamination.fundus.left,
-          },
+        refraction: {
+          right: refraction.right,
+          left: refraction.left,
         },
 
-        diagnosis: diagnosis.trim(),
+        iop: {
+          right: iop.right,
+          left: iop.left,
+        },
 
-        clinicalNotes:
-          clinicalNotes.trim(),
-      };
+        anteriorSegment: {
+          right: eyeExamination.anteriorSegment.right,
+          left: eyeExamination.anteriorSegment.left,
+        },
+
+        fundus: {
+          right: eyeExamination.fundus.right,
+          left: eyeExamination.fundus.left,
+        },
+      },
+
+      diagnosis: diagnosis.trim(),
+
+      clinicalNotes: clinicalNotes.trim(),
+    };
 
     try {
-      await updateVisit(
-        visit.id,
-        updatedVisit,
-      );
+      await updateVisit(visit.id, updatedVisit);
 
-      await showSuccess(
-        "Visit updated successfully.",
-      );
+      await showSuccess("Visit updated successfully.");
 
-      navigate(
-        `/patients/${patient.id}/visits/${visit.id}`,
-      );
+      navigate(`/patients/${patient.id}/visits/${visit.id}`);
     } catch (submitError) {
-      console.error(
-        "Failed to update visit:",
-        submitError,
-      );
+      console.error("Failed to update visit:", submitError);
 
       await showError(
         submitError instanceof Error
@@ -317,29 +309,20 @@ function EditVisitForm({
       <div>
         <button
           type="button"
-          onClick={() =>
-            navigate(
-              `/patients/${patient.id}/visits/${visit.id}`,
-            )
-          }
+          onClick={() => navigate(`/patients/${patient.id}/visits/${visit.id}`)}
           className="mb-3 text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           ← Back to Visit
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-900">
-          Edit Visit
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Edit Visit</h1>
 
         <p className="mt-1 text-sm text-gray-500">
           {patient.name} · {patient.patientId}
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6"
-      >
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Visit Information */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -378,19 +361,12 @@ function EditVisitForm({
         {/* Chief Complaint */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">
-            Chief Complaint{" "}
-            <span className="text-red-500">
-              *
-            </span>
+            Chief Complaint <span className="text-red-500">*</span>
           </h2>
 
           <textarea
             value={chiefComplaint}
-            onChange={(event) =>
-              setChiefComplaint(
-                event.target.value,
-              )
-            }
+            onChange={(event) => setChiefComplaint(event.target.value)}
             rows={3}
             placeholder="Enter patient's chief complaint..."
             className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -399,9 +375,7 @@ function EditVisitForm({
 
         {/* Vital Signs */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Vital Signs
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Vital Signs</h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
@@ -418,8 +392,7 @@ function EditVisitForm({
                 onChange={(event) =>
                   setVitalSigns((current) => ({
                     ...current,
-                    weight:
-                      event.target.value,
+                    weight: event.target.value,
                   }))
                 }
                 placeholder="e.g. 65"
@@ -427,27 +400,80 @@ function EditVisitForm({
               />
             </div>
 
+            {/* Height */}
             <div>
-              <label className="text-sm font-medium text-gray-700">
-                Height (cm)
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Height
+                </label>
 
-              <input
-                type="number"
-                min="0"
-                max="300"
-                step="0.1"
-                value={vitalSigns.height}
-                onChange={(event) =>
-                  setVitalSigns((current) => ({
-                    ...current,
-                    height:
-                      event.target.value,
-                  }))
-                }
-                placeholder="e.g. 170"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+                <select
+                  value={heightUnit}
+                  onChange={(event) =>
+                    handleHeightUnitChange(event.target.value as "cm" | "ft-in")
+                  }
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500"
+                >
+                  <option value="cm">cm</option>
+                  <option value="ft-in">ft / in</option>
+                </select>
+              </div>
+
+              {heightUnit === "cm" ? (
+                <div className="mt-1">
+                  <input
+                    type="number"
+                    min="1"
+                    max="300"
+                    step="0.1"
+                    value={vitalSigns.height}
+                    onChange={(event) =>
+                      setVitalSigns((current) => ({
+                        ...current,
+                        height: event.target.value,
+                      }))
+                    }
+                    placeholder="e.g. 170"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              ) : (
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="9"
+                      step="1"
+                      value={heightFeet}
+                      onChange={(event) => setHeightFeet(event.target.value)}
+                      placeholder="5"
+                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <span className="text-sm text-gray-500">ft</span>
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="11.99"
+                      step="0.1"
+                      value={heightInches}
+                      onChange={(event) => setHeightInches(event.target.value)}
+                      placeholder="7"
+                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <span className="text-sm text-gray-500">in</span>
+                  </div>
+                </div>
+              )}
+
+              <p className="mt-1.5 text-xs text-gray-500">
+                {heightUnit === "cm"
+                  ? "Patient's height in centimeters."
+                  : "Patient's height in feet and inches."}
+              </p>
             </div>
 
             <div>
@@ -457,14 +483,11 @@ function EditVisitForm({
 
               <input
                 type="text"
-                value={
-                  vitalSigns.bloodPressure
-                }
+                value={vitalSigns.bloodPressure}
                 onChange={(event) =>
                   setVitalSigns((current) => ({
                     ...current,
-                    bloodPressure:
-                      event.target.value,
+                    bloodPressure: event.target.value,
                   }))
                 }
                 placeholder="e.g. 120/80"
@@ -482,54 +505,37 @@ function EditVisitForm({
 
           {/* Visual Acuity */}
           <div className="mt-6">
-            <h3 className="font-medium text-gray-900">
-              Visual Acuity
-            </h3>
+            <h3 className="font-medium text-gray-900">Visual Acuity</h3>
 
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[500px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
-                    <th className="px-3 py-2">
-                      Eye
-                    </th>
+                    <th className="px-3 py-2">Eye</th>
 
-                    <th className="px-3 py-2">
-                      Unaided
-                    </th>
+                    <th className="px-3 py-2">Unaided</th>
 
-                    <th className="px-3 py-2">
-                      Aided
-                    </th>
+                    <th className="px-3 py-2">Aided</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {/* Right */}
                   <tr className="border-b border-gray-100">
-                    <td className="px-3 py-3 font-medium">
-                      Right
-                    </td>
+                    <td className="px-3 py-3 font-medium">Right</td>
 
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          visualAcuity.right
-                            .unaided
-                        }
+                        value={visualAcuity.right.unaided}
                         onChange={(event) =>
-                          setVisualAcuity(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                unaided:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setVisualAcuity((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              unaided: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -538,21 +544,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          visualAcuity.right.aided
-                        }
+                        value={visualAcuity.right.aided}
                         onChange={(event) =>
-                          setVisualAcuity(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                aided:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setVisualAcuity((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              aided: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -561,29 +561,20 @@ function EditVisitForm({
 
                   {/* Left */}
                   <tr>
-                    <td className="px-3 py-3 font-medium">
-                      Left
-                    </td>
+                    <td className="px-3 py-3 font-medium">Left</td>
 
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          visualAcuity.left
-                            .unaided
-                        }
+                        value={visualAcuity.left.unaided}
                         onChange={(event) =>
-                          setVisualAcuity(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                unaided:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setVisualAcuity((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              unaided: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -592,21 +583,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          visualAcuity.left.aided
-                        }
+                        value={visualAcuity.left.aided}
                         onChange={(event) =>
-                          setVisualAcuity(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                aided:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setVisualAcuity((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              aided: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -619,15 +604,11 @@ function EditVisitForm({
 
           {/* IOP */}
           <div className="mt-8">
-            <h3 className="font-medium text-gray-900">
-              Intraocular Pressure
-            </h3>
+            <h3 className="font-medium text-gray-900">Intraocular Pressure</h3>
 
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm text-gray-600">
-                  Right Eye
-                </label>
+                <label className="text-sm text-gray-600">Right Eye</label>
 
                 <input
                   type="text"
@@ -635,8 +616,7 @@ function EditVisitForm({
                   onChange={(event) =>
                     setIop((current) => ({
                       ...current,
-                      right:
-                        event.target.value,
+                      right: event.target.value,
                     }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
@@ -644,9 +624,7 @@ function EditVisitForm({
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">
-                  Left Eye
-                </label>
+                <label className="text-sm text-gray-600">Left Eye</label>
 
                 <input
                   type="text"
@@ -654,8 +632,7 @@ function EditVisitForm({
                   onChange={(event) =>
                     setIop((current) => ({
                       ...current,
-                      left:
-                        event.target.value,
+                      left: event.target.value,
                     }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
@@ -666,60 +643,41 @@ function EditVisitForm({
 
           {/* Refraction */}
           <div className="mt-8">
-            <h3 className="font-medium text-gray-900">
-              Refraction
-            </h3>
+            <h3 className="font-medium text-gray-900">Refraction</h3>
 
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[700px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
-                    <th className="px-3 py-2">
-                      Eye
-                    </th>
+                    <th className="px-3 py-2">Eye</th>
 
-                    <th className="px-3 py-2">
-                      SPH
-                    </th>
+                    <th className="px-3 py-2">SPH</th>
 
-                    <th className="px-3 py-2">
-                      CYL
-                    </th>
+                    <th className="px-3 py-2">CYL</th>
 
-                    <th className="px-3 py-2">
-                      AXIS
-                    </th>
+                    <th className="px-3 py-2">AXIS</th>
 
-                    <th className="px-3 py-2">
-                      VA
-                    </th>
+                    <th className="px-3 py-2">VA</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {/* Right */}
                   <tr className="border-b border-gray-100">
-                    <td className="px-3 py-3 font-medium">
-                      Right
-                    </td>
+                    <td className="px-3 py-3 font-medium">Right</td>
 
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.right.sph
-                        }
+                        value={refraction.right.sph}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                sph: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              sph: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -728,20 +686,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.right.cyl
-                        }
+                        value={refraction.right.cyl}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                cyl: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              cyl: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -750,20 +703,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.right.axis
-                        }
+                        value={refraction.right.axis}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                axis: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              axis: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -772,22 +720,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.right
-                            .visualAcuity
-                        }
+                        value={refraction.right.visualAcuity}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              right: {
-                                ...current.right,
-                                visualAcuity:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            right: {
+                              ...current.right,
+                              visualAcuity: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -796,27 +737,20 @@ function EditVisitForm({
 
                   {/* Left */}
                   <tr>
-                    <td className="px-3 py-3 font-medium">
-                      Left
-                    </td>
+                    <td className="px-3 py-3 font-medium">Left</td>
 
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.left.sph
-                        }
+                        value={refraction.left.sph}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                sph: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              sph: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -825,20 +759,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.left.cyl
-                        }
+                        value={refraction.left.cyl}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                cyl: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              cyl: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -847,20 +776,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.left.axis
-                        }
+                        value={refraction.left.axis}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                axis: event.target
-                                  .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              axis: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -869,22 +793,15 @@ function EditVisitForm({
                     <td className="px-3 py-3">
                       <input
                         type="text"
-                        value={
-                          refraction.left
-                            .visualAcuity
-                        }
+                        value={refraction.left.visualAcuity}
                         onChange={(event) =>
-                          setRefraction(
-                            (current) => ({
-                              ...current,
-                              left: {
-                                ...current.left,
-                                visualAcuity:
-                                  event.target
-                                    .value,
-                              },
-                            }),
-                          )
+                          setRefraction((current) => ({
+                            ...current,
+                            left: {
+                              ...current.left,
+                              visualAcuity: event.target.value,
+                            },
+                          }))
                         }
                         className="w-full rounded-lg border border-gray-300 px-3 py-2"
                       />
@@ -897,60 +814,42 @@ function EditVisitForm({
 
           {/* Anterior Segment */}
           <div className="mt-8">
-            <h3 className="font-medium text-gray-900">
-              Anterior Segment
-            </h3>
+            <h3 className="font-medium text-gray-900">Anterior Segment</h3>
 
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm text-gray-600">
-                  Right Eye
-                </label>
+                <label className="text-sm text-gray-600">Right Eye</label>
 
                 <textarea
                   rows={4}
-                  value={
-                    eyeExamination
-                      .anteriorSegment.right
-                  }
+                  value={eyeExamination.anteriorSegment.right}
                   onChange={(event) =>
-                    setEyeExamination(
-                      (current) => ({
-                        ...current,
-                        anteriorSegment: {
-                          ...current.anteriorSegment,
-                          right:
-                            event.target.value,
-                        },
-                      }),
-                    )
+                    setEyeExamination((current) => ({
+                      ...current,
+                      anteriorSegment: {
+                        ...current.anteriorSegment,
+                        right: event.target.value,
+                      },
+                    }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">
-                  Left Eye
-                </label>
+                <label className="text-sm text-gray-600">Left Eye</label>
 
                 <textarea
                   rows={4}
-                  value={
-                    eyeExamination
-                      .anteriorSegment.left
-                  }
+                  value={eyeExamination.anteriorSegment.left}
                   onChange={(event) =>
-                    setEyeExamination(
-                      (current) => ({
-                        ...current,
-                        anteriorSegment: {
-                          ...current.anteriorSegment,
-                          left:
-                            event.target.value,
-                        },
-                      }),
-                    )
+                    setEyeExamination((current) => ({
+                      ...current,
+                      anteriorSegment: {
+                        ...current.anteriorSegment,
+                        left: event.target.value,
+                      },
+                    }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
                 />
@@ -960,58 +859,42 @@ function EditVisitForm({
 
           {/* Fundus */}
           <div className="mt-8">
-            <h3 className="font-medium text-gray-900">
-              Fundus
-            </h3>
+            <h3 className="font-medium text-gray-900">Fundus</h3>
 
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm text-gray-600">
-                  Right Eye
-                </label>
+                <label className="text-sm text-gray-600">Right Eye</label>
 
                 <textarea
                   rows={4}
-                  value={
-                    eyeExamination.fundus.right
-                  }
+                  value={eyeExamination.fundus.right}
                   onChange={(event) =>
-                    setEyeExamination(
-                      (current) => ({
-                        ...current,
-                        fundus: {
-                          ...current.fundus,
-                          right:
-                            event.target.value,
-                        },
-                      }),
-                    )
+                    setEyeExamination((current) => ({
+                      ...current,
+                      fundus: {
+                        ...current.fundus,
+                        right: event.target.value,
+                      },
+                    }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">
-                  Left Eye
-                </label>
+                <label className="text-sm text-gray-600">Left Eye</label>
 
                 <textarea
                   rows={4}
-                  value={
-                    eyeExamination.fundus.left
-                  }
+                  value={eyeExamination.fundus.left}
                   onChange={(event) =>
-                    setEyeExamination(
-                      (current) => ({
-                        ...current,
-                        fundus: {
-                          ...current.fundus,
-                          left:
-                            event.target.value,
-                        },
-                      }),
-                    )
+                    setEyeExamination((current) => ({
+                      ...current,
+                      fundus: {
+                        ...current.fundus,
+                        left: event.target.value,
+                      },
+                    }))
                   }
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
                 />
@@ -1022,16 +905,12 @@ function EditVisitForm({
 
         {/* Diagnosis */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Diagnosis
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Diagnosis</h2>
 
           <textarea
             rows={4}
             value={diagnosis}
-            onChange={(event) =>
-              setDiagnosis(event.target.value)
-            }
+            onChange={(event) => setDiagnosis(event.target.value)}
             placeholder="Enter diagnosis..."
             className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
@@ -1046,11 +925,7 @@ function EditVisitForm({
           <textarea
             rows={5}
             value={clinicalNotes}
-            onChange={(event) =>
-              setClinicalNotes(
-                event.target.value,
-              )
-            }
+            onChange={(event) => setClinicalNotes(event.target.value)}
             placeholder="Enter clinical notes..."
             className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
@@ -1061,9 +936,7 @@ function EditVisitForm({
           <button
             type="button"
             onClick={() =>
-              navigate(
-                `/patients/${patient.id}/visits/${visit.id}`,
-              )
+              navigate(`/patients/${patient.id}/visits/${visit.id}`)
             }
             disabled={isSaving}
             className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1076,9 +949,7 @@ function EditVisitForm({
             disabled={isSaving}
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving
-              ? "Saving Changes..."
-              : "Save Changes"}
+            {isSaving ? "Saving Changes..." : "Save Changes"}
           </button>
         </div>
       </form>

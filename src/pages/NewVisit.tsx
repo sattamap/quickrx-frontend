@@ -334,21 +334,16 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
         </section>
 
         {/* Vital Signs */}
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Vital Signs</h2>
+        <section>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">Vital Signs</h2>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Record the patient's measurements taken during this visit.
-          </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Weight (kg)
+                </label>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            {/* Weight */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Weight
-              </label>
-
-              <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
@@ -356,131 +351,116 @@ function NewVisitForm({ patient }: NewVisitFormProps) {
                   step="0.1"
                   value={vitalSigns.weight}
                   onChange={(event) =>
-                    setVitalSigns((previous) => ({
-                      ...previous,
+                    setVitalSigns((current) => ({
+                      ...current,
                       weight: event.target.value,
                     }))
                   }
-                  placeholder="e.g. 72"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  placeholder="e.g. 65"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
-
-                <span className="shrink-0 text-sm text-gray-500">kg</span>
               </div>
 
-              <p className="mt-1.5 text-xs text-gray-500">
-                Patient's current weight.
-              </p>
-            </div>
+              {/* Height */}
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Height
+                  </label>
 
-            {/* Height */}
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
+                  <select
+                    value={heightUnit}
+                    onChange={(event) =>
+                      setHeightUnit(event.target.value as "cm" | "ft-in")
+                    }
+                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs outline-none focus:border-blue-500"
+                  >
+                    <option value="cm">cm</option>
+                    <option value="ft-in">ft / in</option>
+                  </select>
+                </div>
+
+                {heightUnit === "cm" ? (
+                  <div className="mt-1">
+                    <input
+                      type="number"
+                      min="1"
+                      max="300"
+                      step="0.1"
+                      value={vitalSigns.height}
+                      onChange={(event) =>
+                        setVitalSigns((current) => ({
+                          ...current,
+                          height: event.target.value,
+                        }))
+                      }
+                      placeholder="e.g. 170"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="9"
+                        step="1"
+                        value={heightFeet}
+                        onChange={(event) => setHeightFeet(event.target.value)}
+                        placeholder="5"
+                        className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      />
+                      <span className="text-sm text-gray-500">ft</span>
+                    </div>
+
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="11.99"
+                        step="0.1"
+                        value={heightInches}
+                        onChange={(event) =>
+                          setHeightInches(event.target.value)
+                        }
+                        placeholder="7"
+                        className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      />
+                      <span className="text-sm text-gray-500">in</span>
+                    </div>
+                  </div>
+                )}
+
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {heightUnit === "cm"
+                    ? "Patient's height in centimeters."
+                    : "Patient's height in feet and inches."}
+                </p>
+              </div>
+
+              <div>
                 <label className="text-sm font-medium text-gray-700">
-                  Height
+                  Blood Pressure
                 </label>
 
-                <select
-                  value={heightUnit}
-                  onChange={(event) =>
-                    setHeightUnit(event.target.value as "cm" | "ft-in")
-                  }
-                  className="rounded-md border border-gray-300 bg-white px-1 py-1 text-xs outline-none focus:border-blue-500"
-                >
-                  <option value="cm">cm</option>
-                  <option value="ft-in">ft / in</option>
-                </select>
-              </div>
-
-              {heightUnit === "cm" ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="300"
-                    step="0.1"
-                    value={vitalSigns.height}
-                    onChange={(event) =>
-                      setVitalSigns((previous) => ({
-                        ...previous,
-                        height: event.target.value,
-                      }))
-                    }
-                    placeholder="e.g. 170"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <span className="shrink-0 text-sm text-gray-500">cm</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="9"
-                      step="1"
-                      value={heightFeet}
-                      onChange={(event) => setHeightFeet(event.target.value)}
-                      placeholder="5"
-                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <span className="text-sm text-gray-500">ft</span>
-                  </div>
-
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="11"
-                      step="1"
-                      value={heightInches}
-                      onChange={(event) => setHeightInches(event.target.value)}
-                      placeholder="7"
-                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <span className="text-sm text-gray-500">in</span>
-                  </div>
-                </div>
-              )}
-
-              <p className="mt-1.5 text-xs text-gray-500">
-                {heightUnit === "cm"
-                  ? "Enter patient's height in centimeters."
-                  : "Enter patient's height in feet and inches."}
-              </p>
-            </div>
-
-            {/* Blood Pressure */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Blood Pressure
-              </label>
-
-              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={vitalSigns.bloodPressure}
                   onChange={(event) =>
-                    setVitalSigns((previous) => ({
-                      ...previous,
+                    setVitalSigns((current) => ({
+                      ...current,
                       bloodPressure: event.target.value,
                     }))
                   }
                   placeholder="e.g. 120/80"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
-
-                <span className="shrink-0 text-sm text-gray-500">mmHg</span>
               </div>
-
-              <p className="mt-1.5 text-xs text-gray-500">
-                Enter systolic/diastolic pressure, e.g. 120/80.
-              </p>
             </div>
           </div>
         </section>
-
+        {/* setHeightUnit */}
         {/* Ophthalmic Examination */}
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">

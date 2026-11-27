@@ -81,7 +81,264 @@ const emptyMedicineForm: MedicineForm = {
   instructions: "",
 };
 
+const prescriptionSuggestions = {
+  investigations: [
+    {
+      category: "Basic Ophthalmology Examinations",
+      items: [
+        "Visual Acuity Test",
+        "Refraction",
+        "Slit Lamp Examination",
+        "Intraocular Pressure (IOP) Measurement",
+        "Fundus Examination",
+        "Dilated Fundus Examination",
+      ],
+    },
+    {
+      category: "Retinal and Optic Nerve Investigations",
+      items: [
+        "OCT Macula",
+        "OCT RNFL",
+        "OCT Optic Nerve Head",
+        "Fundus Photography",
+        "Fundus Fluorescein Angiography (FFA)",
+        "Visual Field Test (Perimetry)",
+        "B-Scan Ultrasonography",
+        "A-Scan Biometry",
+      ],
+    },
+    {
+      category: "Cornea, Glaucoma and Other Eye Investigations",
+      items: [
+        "Pachymetry",
+        "Gonioscopy",
+        "Corneal Topography",
+        "Keratometry",
+        "Specular Microscopy",
+        "Schirmer Test",
+        "Tear Film Break-Up Time (TBUT)",
+        "Dry Eye Assessment",
+        "Color Vision Test",
+        "Amsler Grid Test",
+      ],
+    },
+    {
+      category: "General Blood and Laboratory Investigations",
+      items: [
+        "Complete Blood Count (CBC)",
+        "ESR (Erythrocyte Sedimentation Rate)",
+        "CRP (C-Reactive Protein)",
+        "Blood Grouping and Rh Typing",
+      ],
+    },
+    {
+      category: "Blood Glucose / Diabetes Investigations",
+      items: [
+        "Fasting Blood Glucose (FBS)",
+        "Random Blood Glucose (RBS)",
+        "2-Hour Postprandial Blood Glucose (2HPP / PPBS)",
+        "HbA1c (Glycated Hemoglobin)",
+        "Oral Glucose Tolerance Test (OGTT)",
+      ],
+    },
+    {
+      category: "Lipid and Metabolic Investigations",
+      items: [
+        "Lipid Profile",
+        "Serum Uric Acid",
+        "Thyroid Function Test (TFT)",
+      ],
+    },
+    {
+      category: "Kidney and Liver Investigations",
+      items: [
+        "Renal Function Test (RFT)",
+        "Serum Creatinine",
+        "Blood Urea",
+        "Serum Electrolytes",
+        "Liver Function Test (LFT)",
+        "Urine R/E (Routine Examination)",
+      ],
+    },
+    {
+      category: "Cardiac and General Investigations",
+      items: ["ECG (Electrocardiogram)", "Chest X-Ray (CXR)"],
+    },
+  ],
+
+  advice: [
+    "Avoid rubbing your eyes",
+    "চোখ ঘষা থেকে বিরত থাকুন",
+    "Maintain proper eye hygiene",
+    "চোখের পরিষ্কার-পরিচ্ছন্নতা বজায় রাখুন",
+    "Wash hands before applying eye drops",
+    "ড্রপ ব্যবহারের আগে হাত ধুয়ে নিন",
+    "Avoid dust and smoke",
+    "ধুলাবালি ও ধোঁয়া এড়িয়ে চলুন",
+    "Wear protective eyewear when needed",
+    "প্রয়োজনে চোখের সুরক্ষামূলক চশমা ব্যবহার করুন",
+    "Take regular breaks during screen use",
+    "দীর্ঘক্ষণ স্ক্রিন ব্যবহারের মাঝে বিরতি নিন",
+    "Use prescribed medicines as directed",
+    "চিকিৎসকের নির্দেশ অনুযায়ী ওষুধ ব্যবহার করুন",
+  ],
+
+  followUp: [
+    "Follow up after 1 week",
+    "Follow up after 2 weeks",
+    "Follow up after 3 weeks",
+    "Follow up after 4 weeks",
+    "Follow up after 6 weeks",
+    "Follow up after 2 months",
+    "Follow up after 3 months",
+    "১ সপ্তাহ পর পুনরায় দেখাবেন",
+    "২ সপ্তাহ পর পুনরায় দেখাবেন",
+    "৩ সপ্তাহ পর পুনরায় দেখাবেন",
+    "৪ সপ্তাহ পর পুনরায় দেখাবেন",
+    "৬ সপ্তাহ পর পুনরায় দেখাবেন",
+    "২ মাস পর পুনরায় দেখাবেন",
+    "৩ মাস পর পুনরায় দেখাবেন",
+    "আগে সমস্যা হলে দ্রুত যোগাযোগ করবেন",
+  ],
+};
+
+const medicineSuggestions = {
+  form: [
+    "Eye Drop",
+    "চোখের ড্রপ",
+    "Eye Ointment",
+    "চোখের মলম",
+    "Tablet",
+    "ট্যাবলেট",
+    "Capsule",
+    "ক্যাপসুল",
+    "Syrup",
+    "সিরাপ",
+    "Gel",
+    "জেল",
+    "Other",
+    "অন্যান্য",
+  ],
+
+  dose: [
+    "1 drop",
+    "2 drops",
+    "১ ফোঁটা",
+    "২ ফোঁটা",
+    "1 tablet",
+    "2 tablets",
+    "১টি ট্যাবলেট",
+    "২টি ট্যাবলেট",
+    "1 capsule",
+    "১টি ক্যাপসুল",
+    "5 ml",
+    "10 ml",
+    "৫ মি.লি.",
+    "১০ মি.লি.",
+    "Apply a thin layer",
+    "পাতলা করে লাগাতে হবে",
+  ],
+
+  frequency: [
+    "1+0+0",
+    "0+1+0",
+    "0+0+1",
+    "1+1+0",
+    "1+0+1",
+    "0+1+1",
+    "1+1+1",
+    "1+1+1+1",
+    "Once daily",
+    "দিনে ১ বার",
+    "Twice daily",
+    "দিনে ২ বার",
+    "Three times daily",
+    "দিনে ৩ বার",
+    "Four times daily",
+    "দিনে ৪ বার",
+    "Every 2 hours",
+    "প্রতি ২ ঘণ্টা পরপর",
+    "Every 4 hours",
+    "প্রতি ৪ ঘণ্টা পরপর",
+    "At bedtime",
+    "রাতে ঘুমানোর আগে",
+    "As needed",
+    "প্রয়োজন অনুযায়ী",
+    "As directed",
+    "নির্দেশ অনুযায়ী",
+  ],
+
+  duration: [
+    "3 days",
+    "5 days",
+    "7 days",
+    "10 days",
+    "14 days",
+    "21 days",
+    "1 month",
+    "2 months",
+    "3 months",
+    "৩ দিন",
+    "৫ দিন",
+    "৭ দিন",
+    "১০ দিন",
+    "১৪ দিন",
+    "১ মাস",
+    "২ মাস",
+    "৩ মাস",
+    "Continue until review",
+    "পরবর্তী ফলোআপ পর্যন্ত",
+  ],
+
+  instructions: [
+    "Shake well before use",
+    "ব্যবহারের আগে ভালোভাবে ঝাঁকিয়ে নিন",
+    "Apply to affected eye",
+    "আক্রান্ত চোখে ব্যবহার করুন",
+    "For both eyes",
+    "উভয় চোখে ব্যবহার করুন",
+    "For right eye",
+    "ডান চোখে ব্যবহার করুন",
+    "For left eye",
+    "বাম চোখে ব্যবহার করুন",
+    "Close eyes for 1 minute after instillation",
+    "ড্রপ দেওয়ার পর ১ মিনিট চোখ বন্ধ রাখুন",
+    "Do not touch the dropper tip",
+    "ড্রপারের মুখ চোখে বা অন্য কোথাও স্পর্শ করাবেন না",
+    "Apply at bedtime",
+    "রাতে ঘুমানোর আগে ব্যবহার করুন",
+    "Use as directed",
+    "চিকিৎসকের নির্দেশ অনুযায়ী ব্যবহার করুন",
+  ],
+};
+
 type MedicineChangeEvent = ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+
+const formatDateTime = (value: string): string => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const formattedDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+
+  const formattedTime = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Dhaka",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+
+  return `${formattedDate}, ${formattedTime}`;
+};
 
 function PrescriptionBuilder() {
   const navigate = useNavigate();
@@ -139,6 +396,16 @@ function PrescriptionBuilder() {
   >([]);
 
   const [investigationTestName, setInvestigationTestName] = useState("");
+  const [showInvestigationSuggestions, setShowInvestigationSuggestions] =
+    useState(false);
+  const filteredInvestigationGroups = prescriptionSuggestions.investigations
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.toLowerCase().includes(investigationTestName.trim().toLowerCase()),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const [investigationEye, setInvestigationEye] =
     useState<InvestigationEye>("OU");
@@ -766,7 +1033,7 @@ function PrescriptionBuilder() {
             <span>
               Visit Date:{" "}
               <span className="font-medium text-slate-900">
-                {visit.visitDate}
+                {formatDateTime(visit.visitDate)}
               </span>
             </span>
 
@@ -842,7 +1109,7 @@ function PrescriptionBuilder() {
                 Visit Date
               </p>
               <p className="mt-1 break-words text-sm text-slate-700">
-                {visit.visitDate}
+                {formatDateTime(visit.visitDate)}
               </p>
             </div>
 
@@ -965,32 +1232,29 @@ function PrescriptionBuilder() {
               <div>
                 <label
                   htmlFor="medicine-form"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                  className="mb-1 block text-sm font-medium text-gray-700"
                 >
                   Form
                 </label>
 
-                <select
+                <input
                   id="medicine-form"
                   name="form"
+                  type="text"
+                  list="medicine-form-options"
                   value={medicineForm.form}
-                  onChange={handleMedicineFormChange}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select form</option>
+                  onChange={(event) =>
+                    handleMedicineFormChange("form", event.target.value)
+                  }
+                  placeholder="Select or type form"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
 
-                  <option value="Eye Drop">Eye Drop</option>
-
-                  <option value="Eye Ointment">Eye Ointment</option>
-
-                  <option value="Tablet">Tablet</option>
-
-                  <option value="Capsule">Capsule</option>
-
-                  <option value="Syrup">Syrup</option>
-
-                  <option value="Other">Other</option>
-                </select>
+                <datalist id="medicine-form-options">
+                  {medicineSuggestions.form.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Dose */}
@@ -1006,71 +1270,50 @@ function PrescriptionBuilder() {
                   id="medicine-dose"
                   name="dose"
                   type="text"
+                  list="medicine-dose-options"
                   value={medicineForm.dose}
                   onChange={(event) =>
                     handleMedicineFormChange("dose", event.target.value)
                   }
-                  placeholder="e.g. 1 drop"
+                  placeholder="Select or type dose"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
+
+                <datalist id="medicine-dose-options">
+                  {medicineSuggestions.dose.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Frequency */}
               <div>
                 <label
                   htmlFor="medicine-frequency"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                  className="mb-1 block text-sm font-medium text-gray-700"
                 >
                   Frequency
                 </label>
 
-                <select
+                <input
                   id="medicine-frequency"
                   name="frequency"
+                  type="text"
+                  list="medicine-frequency-options"
                   value={medicineForm.frequency}
-                  onChange={handleMedicineFormChange}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select frequency</option>
+                  onChange={(event) =>
+                    handleMedicineFormChange("frequency", event.target.value)
+                  }
+                  placeholder="Select or type frequency"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
 
-                  <optgroup label="Prescription Pattern">
-                    <option value="1+0+0">1+0+0</option>
-
-                    <option value="0+1+0">0+1+0</option>
-
-                    <option value="0+0+1">0+0+1</option>
-
-                    <option value="1+1+0">1+1+0</option>
-
-                    <option value="1+0+1">1+0+1</option>
-
-                    <option value="0+1+1">0+1+1</option>
-
-                    <option value="1+1+1">1+1+1</option>
-
-                    <option value="1+1+1+1">1+1+1+1</option>
-                  </optgroup>
-
-                  <optgroup label="Standard Frequency">
-                    <option value="Once daily">Once daily</option>
-
-                    <option value="Twice daily">Twice daily</option>
-
-                    <option value="Three times daily">Three times daily</option>
-
-                    <option value="Four times daily">Four times daily</option>
-
-                    <option value="Every 2 hours">Every 2 hours</option>
-
-                    <option value="Every 4 hours">Every 4 hours</option>
-
-                    <option value="At bedtime">At bedtime</option>
-
-                    <option value="As directed">As directed</option>
-                  </optgroup>
-                </select>
+                <datalist id="medicine-frequency-options">
+                  {medicineSuggestions.frequency.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
-
               {/* Duration */}
               <div>
                 <label
@@ -1084,13 +1327,20 @@ function PrescriptionBuilder() {
                   id="medicine-duration"
                   name="duration"
                   type="text"
+                  list="medicine-duration-options"
                   value={medicineForm.duration}
                   onChange={(event) =>
                     handleMedicineFormChange("duration", event.target.value)
                   }
-                  placeholder="e.g. 7 days"
+                  placeholder="Select or type duration"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
+
+                <datalist id="medicine-duration-options">
+                  {medicineSuggestions.duration.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Instructions */}
@@ -1106,13 +1356,20 @@ function PrescriptionBuilder() {
                   id="medicine-instructions"
                   name="instructions"
                   type="text"
+                  list="medicine-instructions-options"
                   value={medicineForm.instructions}
                   onChange={(event) =>
                     handleMedicineFormChange("instructions", event.target.value)
                   }
-                  placeholder="e.g. Shake well before use"
+                  placeholder="Select or type instructions"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
+
+                <datalist id="medicine-instructions-options">
+                  {medicineSuggestions.instructions.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
             </div>
 
@@ -1471,16 +1728,63 @@ function PrescriptionBuilder() {
                   Investigation / Test
                 </label>
 
-                <input
-                  id="investigation-test-name"
-                  type="text"
-                  value={investigationTestName}
-                  onChange={(event) =>
-                    setInvestigationTestName(event.target.value)
-                  }
-                  placeholder="e.g. OCT RNFL, Visual Field, B-scan"
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+                <div className="relative">
+                  <input
+                    id="investigation-test-name"
+                    type="text"
+                    value={investigationTestName}
+                    onChange={(event) => {
+                      setInvestigationTestName(event.target.value);
+                      setShowInvestigationSuggestions(true);
+                    }}
+                    onFocus={() => setShowInvestigationSuggestions(true)}
+                    onBlur={() => {
+                      // Delay closing so a suggestion can be clicked first.
+                      window.setTimeout(() => {
+                        setShowInvestigationSuggestions(false);
+                      }, 150);
+                    }}
+                    placeholder="Search or type investigation/test..."
+                    autoComplete="off"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+
+                  {showInvestigationSuggestions && (
+                    <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                      {filteredInvestigationGroups.length > 0 ? (
+                        filteredInvestigationGroups.map((group) => (
+                          <div key={group.category}>
+                            {/* Non-selectable category heading */}
+                            <div className="sticky top-0 border-y border-slate-200 bg-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+                              {group.category}
+                            </div>
+
+                            {/* Selectable investigation names */}
+                            {group.items.map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setInvestigationTestName(item);
+                                  setShowInvestigationSuggestions(false);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-blue-50"
+                              >
+                                {item}
+                              </button>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-3 text-sm text-slate-500">
+                          No matching suggestions. You can enter a custom test
+                          name.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1638,11 +1942,28 @@ function PrescriptionBuilder() {
             Add general advice for the patient.
           </p>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            {prescriptionSuggestions.advice.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() =>
+                  setAdvice((current) =>
+                    current.trim() ? `${current.trim()}\n${item}` : item,
+                  )
+                }
+                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100"
+              >
+                + {item}
+              </button>
+            ))}
+          </div>
+
           <textarea
             value={advice}
             onChange={(event) => setAdvice(event.target.value)}
             rows={5}
-            placeholder="Enter patient advice..."
+            placeholder="Enter or edit patient advice..."
             className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </section>
@@ -1655,11 +1976,24 @@ function PrescriptionBuilder() {
             Enter follow-up instructions.
           </p>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            {prescriptionSuggestions.followUp.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFollowUp(item)}
+                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
           <textarea
             value={followUp}
             onChange={(event) => setFollowUp(event.target.value)}
             rows={3}
-            placeholder="e.g. Follow up after 4 weeks."
+            placeholder="Select a suggestion or enter custom follow-up instructions..."
             className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </section>
